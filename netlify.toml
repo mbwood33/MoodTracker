@@ -1,0 +1,39 @@
+# Static Vite PWA deployment. Netlify builds this repository on each configured
+# Git push and publishes the generated application shell from dist/.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# React Router owns client-side routes such as /log and /auth. Existing static
+# assets still win under Netlify's normal shadowing behavior.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Service workers and the manifest must be revalidated so a published update
+# can be discovered. Vite-hashed assets may safely be cached for a year.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "DENY"

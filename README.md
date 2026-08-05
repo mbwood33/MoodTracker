@@ -1,8 +1,9 @@
 # Mood Tracker
 
-A production-oriented foundation for a private, local-first mood-tracking PWA.
-Phase 0 contains the application shell and engineering infrastructure only; it
-does not yet create, store, or synchronize mood entries.
+A private, local-first mood-tracking PWA. Phase 1 provides account access,
+five-point mood entries, optional plain-text notes and energy, past-entry
+creation, soft deletion, a reverse-chronological timeline, durable IndexedDB
+storage, and basic Supabase synchronization.
 
 ## Prerequisites
 
@@ -18,9 +19,10 @@ copy .env.development.example .env.development
 npm run dev
 ```
 
-The unconfigured application shell works without Supabase. When local Supabase
-is running, copy its public API URL and publishable/anonymous key into
-`.env.development`. Never place a service-role key in a `VITE_` variable.
+The unconfigured shell can be explored without Supabase, but accounts and
+entry creation require the backend values. When local Supabase is running, copy
+its public API URL and publishable/anonymous key into `.env.development`. Never
+place a service-role key in a `VITE_` variable.
 
 ## Commands
 
@@ -51,8 +53,8 @@ contract:
 - `.env.local` may override either mode on one machine and is ignored by Git.
 
 All browser-visible configuration uses the `VITE_` prefix and is validated by
-Zod. Supabase URL and publishable key are optional in Phase 0, but must be set as
-a pair once remote features are enabled.
+Zod. Supabase URL and publishable key must be set as a pair before using account
+or synchronization features.
 
 ## Project map
 
@@ -61,13 +63,13 @@ src/
   app/              composition, providers, and routes
   components/       shared presentation and shadcn/ui components
   config/           validated public environment configuration
-  data/local/       Dexie and IndexedDB boundary (Phase 1)
+  data/local/       versioned Dexie stores and local entry repository
   data/remote/      Supabase boundary
   domain/           framework-independent types and calculations
   features/         feature-owned UI and orchestration
   hooks/            shared presentation hooks
   pages/            route entry points
-  sync/             offline queue and synchronization boundary (Phase 1)
+  sync/             offline mutation queue and synchronization boundary
   styles/           global design tokens and theme styles
   test/             Vitest setup
 e2e/                Playwright browser tests

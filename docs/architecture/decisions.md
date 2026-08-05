@@ -149,3 +149,26 @@ actions/RSC behavior. This client-only SPA does not enable those modes, but the
 advisory remains tracked rather than suppressed. Upgrade immediately when the
 router publishes a release that resolves the advisory without reintroducing the
 older redirect/SSR advisories.
+
+## ADR-011: Phase 1 entry and synchronization contract
+
+**Status:** Accepted
+
+Every entry mutation is first validated by the framework-independent domain
+model, then committed with its outbox record in one Dexie transaction. Entries
+retain `occurred_at_utc`, the original IANA time zone, and the supplied local
+calendar date. The latter remains the canonical input for all later calendar and
+statistics work.
+
+The browser only attempts synchronization after the local commit. The queue is
+ordered, retryable, and retains failed or interrupted records. A reconnect pushes
+queued mutations and pulls the authenticated user's remote rows; a remote row
+cannot replace an entry that still has a local queued mutation. This is a
+deliberately conservative Phase 1 conflict posture: it preserves both sides for
+later explicit resolution rather than silently losing an edit.
+
+Supabase owns account identity and has a paired `profiles` record. Every
+user-owned table has RLS enabled. The mutation RPC checks ownership and expected
+revision atomically; it returns a serialization conflict instead of applying a
+blind last-write-wins update. Presentation code stays persistence-agnostic via a
+feature adapter supplied by application composition.

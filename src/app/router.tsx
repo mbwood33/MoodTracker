@@ -1,12 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom';
 
 import { AppShell } from '@/components/layout/app-shell';
-import { CalendarPage } from '@/pages/calendar-page';
 import { ErrorPage } from '@/pages/error-page';
-import { LogPage } from '@/pages/log-page';
-import { MorePage } from '@/pages/more-page';
-import { StatsPage } from '@/pages/stats-page';
-import { TodayPage } from '@/pages/today-page';
 
 export const router = createBrowserRouter([
   {
@@ -14,11 +9,48 @@ export const router = createBrowserRouter([
     element: <AppShell />,
     errorElement: <ErrorPage />,
     children: [
-      { index: true, element: <TodayPage /> },
-      { path: 'log', element: <LogPage /> },
-      { path: 'calendar', element: <CalendarPage /> },
-      { path: 'stats', element: <StatsPage /> },
-      { path: 'more', element: <MorePage /> },
+      {
+        index: true,
+        lazy: async () => {
+          const { TodayPage } = await import('@/pages/today-page');
+          return { Component: TodayPage };
+        },
+      },
+      {
+        path: 'auth',
+        lazy: async () => {
+          const { AuthPage } = await import('@/pages/auth-page');
+          return { Component: AuthPage };
+        },
+      },
+      {
+        path: 'log',
+        lazy: async () => {
+          const { LogPage } = await import('@/pages/log-page');
+          return { Component: LogPage };
+        },
+      },
+      {
+        path: 'calendar',
+        lazy: async () => {
+          const { CalendarPage } = await import('@/pages/calendar-page');
+          return { Component: CalendarPage };
+        },
+      },
+      {
+        path: 'stats',
+        lazy: async () => {
+          const { StatsPage } = await import('@/pages/stats-page');
+          return { Component: StatsPage };
+        },
+      },
+      {
+        path: 'more',
+        lazy: async () => {
+          const { MorePage } = await import('@/pages/more-page');
+          return { Component: MorePage };
+        },
+      },
     ],
   },
 ]);

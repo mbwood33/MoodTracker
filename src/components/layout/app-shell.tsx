@@ -2,6 +2,7 @@ import { Cloud, CloudOff } from 'lucide-react';
 import { Outlet } from 'react-router-dom';
 
 import { AppNavigation } from '@/components/layout/app-navigation';
+import { AccountControl } from '@/components/account-control';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 
 export function AppShell() {
@@ -35,7 +36,10 @@ export function AppShell() {
               <Cloud aria-hidden="true" className="text-success size-4" />
               <span>Local-first workspace</span>
             </div>
-            <ThemeSwitcher />
+            <div className="flex items-center gap-2">
+              <AccountControl />
+              <ThemeSwitcher />
+            </div>
           </header>
 
           <main
