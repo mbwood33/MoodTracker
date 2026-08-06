@@ -2,7 +2,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 
-import { moodFor, type MoodEntry } from './types';
+import { energyFor, moodFor, type MoodEntry } from './types';
 
 type EntryTimelineProps = {
   entries: MoodEntry[];
@@ -77,7 +77,8 @@ export function EntryTimeline({
                 ) : null}
                 {entry.energyRating ? (
                   <p className="text-muted-foreground mt-3 text-sm">
-                    Energy: {entry.energyRating}/5
+                    Energy: {energyFor(entry.energyRating).label} (
+                    {entry.energyRating}/5)
                   </p>
                 ) : null}
                 <div className="mt-3 flex gap-1">

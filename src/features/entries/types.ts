@@ -48,6 +48,17 @@ export const moods: ReadonlyArray<{
   { rating: 5, label: 'Rad', face: '😄' },
 ];
 
+export const energyLevels: ReadonlyArray<{
+  rating: MoodRating;
+  label: string;
+}> = [
+  { rating: 1, label: 'Exhausted' },
+  { rating: 2, label: 'Low' },
+  { rating: 3, label: 'OK' },
+  { rating: 4, label: 'High' },
+  { rating: 5, label: 'Energized' },
+];
+
 export function moodFor(rating: MoodRating) {
   const mood = moods.find((item) => item.rating === rating);
 
@@ -56,4 +67,14 @@ export function moodFor(rating: MoodRating) {
   }
 
   return mood;
+}
+
+export function energyFor(rating: MoodRating) {
+  const energy = energyLevels.find((item) => item.rating === rating);
+
+  if (!energy) {
+    throw new Error(`Unsupported energy rating: ${rating}`);
+  }
+
+  return energy;
 }

@@ -30,4 +30,26 @@ describe('EntryWorkspace', () => {
       expect.objectContaining({ moodRating: 5 }),
     );
   });
+
+  it('offers the defined optional energy scale', async () => {
+    const user = userEvent.setup();
+    render(<EntryWorkspace />);
+
+    await user.click(screen.getByRole('button', { name: 'Add details' }));
+
+    const energySelect = screen.getByRole<HTMLSelectElement>('combobox', {
+      name: 'Energy (optional)',
+    });
+    expect(energySelect).toHaveValue('');
+    expect(
+      Array.from(energySelect.options, (option) => option.textContent),
+    ).toEqual([
+      'Not recorded',
+      '1 — Exhausted',
+      '2 — Low',
+      '3 — OK',
+      '4 — High',
+      '5 — Energized',
+    ]);
+  });
 });

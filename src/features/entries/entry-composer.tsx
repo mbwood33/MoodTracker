@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 
 import {
+  energyLevels,
   moods,
   type EntryDraft,
   type MoodEntry,
@@ -161,18 +162,20 @@ export function EntryComposer({
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-2 text-sm font-medium">
-              Energy{' '}
-              <span className="text-muted-foreground font-normal">
-                (optional)
+              <span>
+                Energy{' '}
+                <span className="text-muted-foreground font-normal">
+                  (optional)
+                </span>
               </span>
               <select
                 className="border-input bg-background h-10 rounded-xl border px-3"
                 {...form.register('energyRating')}
               >
                 <option value="">Not recorded</option>
-                {moods.map((mood) => (
-                  <option key={mood.rating} value={mood.rating}>
-                    {mood.rating} — {mood.label}
+                {energyLevels.map((energy) => (
+                  <option key={energy.rating} value={energy.rating}>
+                    {energy.rating} — {energy.label}
                   </option>
                 ))}
               </select>
