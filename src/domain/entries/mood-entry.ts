@@ -9,7 +9,8 @@ export const isoTimestampSchema = z.string().datetime({ offset: true });
 
 export const moodEntrySchema = z.object({
   id: z.string().uuid(),
-  userId: z.string().uuid(),
+  // Firebase Auth UIDs are opaque strings rather than UUIDs.
+  userId: z.string().min(1).max(128),
   moodRating: moodRatingSchema,
   energyRating: moodRatingSchema.nullable(),
   notePlainText: z.string().max(100_000),

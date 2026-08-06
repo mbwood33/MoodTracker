@@ -23,7 +23,7 @@ export function TodayPage() {
             Loading your private journal…
           </p>
         ) : user ? (
-          <EntryWorkspaceContainer userId={user.id} showTimeline={false} />
+          <EntryWorkspaceContainer userId={user.uid} showTimeline={false} />
         ) : (
           <EntryAccessCard />
         )}

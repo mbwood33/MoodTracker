@@ -1,3 +1,0 @@
--- Phase 0 has no application records to seed.
--- Add deterministic, non-sensitive development fixtures in the phase that
--- introduces the corresponding schema.

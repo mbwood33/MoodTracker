@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { DexieLocalEntryRepository } from '@/data/local';
-import { SupabaseMoodEntryRepository } from '@/data/remote/mood-entry-repository';
-import { getSupabaseClient } from '@/data/remote/supabase';
+import { getFirebaseServices } from '@/data/remote/firebase';
+import { FirebaseMoodEntryRepository } from '@/data/remote/mood-entry-repository';
 import type { MoodEntry as DomainMoodEntry } from '@/domain';
 import {
   EntryWorkspace,
@@ -57,13 +57,13 @@ export function EntryWorkspaceContainer({
   const [services] = useState<{
     local: DexieLocalEntryRepository;
     entries: LocalFirstEntries;
-    remote: SupabaseMoodEntryRepository;
+    remote: FirebaseMoodEntryRepository;
   }>(() => {
     const local = new DexieLocalEntryRepository();
     return {
       local,
       entries: new LocalFirstEntries(local),
-      remote: new SupabaseMoodEntryRepository(),
+      remote: new FirebaseMoodEntryRepository(),
     };
   });
   const syncing = useRef(false);
@@ -92,7 +92,7 @@ export function EntryWorkspaceContainer({
   const synchronize = useCallback(async () => {
     if (syncing.current) return;
 
-    if (!navigator.onLine || !getSupabaseClient()) {
+    if (!navigator.onLine || !getFirebaseServices()) {
       syncState.current = 'saved-locally';
       await loadEntries();
       return;

@@ -21,7 +21,7 @@ export function LogPage() {
         {status === 'loading' ? (
           <p className="text-muted-foreground text-sm">Loading your entries…</p>
         ) : user ? (
-          <EntryWorkspaceContainer userId={user.id} />
+          <EntryWorkspaceContainer userId={user.uid} />
         ) : (
           <div className="border-border bg-card max-w-xl rounded-3xl border p-6 shadow-sm">
             <h2 className="text-xl font-semibold">Your private log awaits</h2>

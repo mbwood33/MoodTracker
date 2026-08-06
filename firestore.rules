@@ -1,0 +1,86 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function validProfile(data) {
+      return data.keys().hasAll([
+          'displayName', 'email', 'timeZone', 'locale', 'theme',
+          'weekStartDay', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'displayName', 'email', 'timeZone', 'locale', 'theme',
+          'weekStartDay', 'createdAt', 'updatedAt'
+        ]) &&
+        (data.displayName == null || data.displayName is string) &&
+        (data.email == null || data.email is string) &&
+        data.timeZone is string &&
+        data.locale is string &&
+        data.theme in ['light', 'dark', 'system'] &&
+        data.weekStartDay is int &&
+        data.weekStartDay >= 0 && data.weekStartDay <= 6 &&
+        data.createdAt is string &&
+        data.updatedAt is string;
+    }
+
+    function validMoodEntry(data, userId, entryId) {
+      return data.keys().hasAll([
+          'id', 'userId', 'moodRating', 'energyRating', 'notePlainText',
+          'occurredAtUtc', 'occurredTimeZone', 'occurredLocalDate',
+          'createdAt', 'updatedAt', 'deletedAt', 'revision',
+          'clientMutationId'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'userId', 'moodRating', 'energyRating', 'notePlainText',
+          'occurredAtUtc', 'occurredTimeZone', 'occurredLocalDate',
+          'createdAt', 'updatedAt', 'deletedAt', 'revision',
+          'clientMutationId'
+        ]) &&
+        data.id == entryId &&
+        data.userId == userId &&
+        data.moodRating is int &&
+        data.moodRating >= 1 && data.moodRating <= 5 &&
+        (data.energyRating == null ||
+          (data.energyRating is int &&
+            data.energyRating >= 1 && data.energyRating <= 5)) &&
+        data.notePlainText is string &&
+        data.notePlainText.size() <= 100000 &&
+        data.occurredAtUtc is string &&
+        data.occurredTimeZone is string &&
+        data.occurredLocalDate is string &&
+        data.createdAt is string &&
+        data.updatedAt is string &&
+        (data.deletedAt == null || data.deletedAt is string) &&
+        data.revision is int && data.revision >= 0 &&
+        data.clientMutationId is string;
+    }
+
+    match /users/{userId} {
+      allow read, delete: if isOwner(userId);
+      allow create: if isOwner(userId) && validProfile(request.resource.data);
+      allow update: if isOwner(userId) &&
+        validProfile(request.resource.data) &&
+        request.resource.data.createdAt == resource.data.createdAt;
+
+      match /moodEntries/{entryId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+          validMoodEntry(request.resource.data, userId, entryId) &&
+          request.resource.data.revision == 0;
+        allow update: if isOwner(userId) &&
+          validMoodEntry(request.resource.data, userId, entryId) &&
+          request.resource.data.userId == resource.data.userId &&
+          request.resource.data.id == resource.data.id &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.revision == resource.data.revision + 1;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

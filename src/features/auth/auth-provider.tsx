@@ -1,74 +1,69 @@
+import { onAuthStateChanged, type User } from 'firebase/auth';
 import { useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 
-import type { Session } from '@supabase/supabase-js';
-
 import {
-  SupabaseAuthRepository,
+  FirebaseAuthRepository,
   type SignUpInput,
 } from '@/data/remote/auth-repository';
-import { getSupabaseClient } from '@/data/remote/supabase';
+import { getFirebaseServices } from '@/data/remote/firebase';
 import { AuthContext, type AuthStatus } from '@/features/auth/auth-context';
 
+function getRecoveryCode(): string | undefined {
+  const parameters = new URLSearchParams(window.location.search);
+  return parameters.get('mode') === 'resetPassword'
+    ? (parameters.get('oobCode') ?? undefined)
+    : undefined;
+}
+
 export function AuthProvider({ children }: PropsWithChildren) {
-  const client = getSupabaseClient();
-  const [session, setSession] = useState<Session | null>(null);
+  const services = getFirebaseServices();
+  const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<AuthStatus>(
-    client ? 'loading' : 'unconfigured',
+    services ? 'loading' : 'unconfigured',
   );
-  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
-  const repository = useMemo(() => new SupabaseAuthRepository(), []);
+  const [recoveryCode, setRecoveryCode] = useState(getRecoveryCode);
+  const repository = useMemo(() => new FirebaseAuthRepository(), []);
 
   useEffect(() => {
-    if (!client) return;
-
-    void client.auth.getSession().then(({ data, error }) => {
-      if (error) {
-        setSession(null);
+    if (!services) return;
+    return onAuthStateChanged(
+      services.auth,
+      (nextUser) => {
+        setUser(nextUser);
+        setStatus(nextUser ? 'authenticated' : 'unauthenticated');
+      },
+      () => {
+        setUser(null);
         setStatus('unauthenticated');
-        return;
-      }
-
-      setSession(data.session);
-      setStatus(data.session ? 'authenticated' : 'unauthenticated');
-    });
-
-    const {
-      data: { subscription },
-    } = client.auth.onAuthStateChange((event, nextSession) => {
-      setSession(nextSession);
-      setStatus(nextSession ? 'authenticated' : 'unauthenticated');
-      setIsPasswordRecovery(event === 'PASSWORD_RECOVERY');
-    });
-
-    return () => subscription.unsubscribe();
-  }, [client]);
+      },
+    );
+  }, [services]);
 
   const value = useMemo(
     () => ({
       status,
-      session,
-      user: session?.user ?? null,
-      isPasswordRecovery,
-      signUp: async (input: SignUpInput) => {
-        const result = await repository.signUp(input);
-        return result.session;
-      },
+      user,
+      isPasswordRecovery: Boolean(recoveryCode),
+      signUp: (input: SignUpInput) => repository.signUp(input),
       signIn: async (email: string, password: string) => {
         await repository.signIn(email, password);
       },
       signOut: async () => {
         await repository.signOut();
-        setIsPasswordRecovery(false);
       },
       sendPasswordReset: async (email: string) => {
-        await repository.sendPasswordReset(email, window.location.origin);
+        await repository.sendPasswordReset(
+          email,
+          `${window.location.origin}/auth`,
+        );
       },
       updatePassword: async (password: string) => {
-        await repository.updatePassword(password);
-        setIsPasswordRecovery(false);
+        await repository.updatePassword(password, recoveryCode);
+        setRecoveryCode(undefined);
+        window.history.replaceState({}, '', '/auth');
       },
     }),
-    [isPasswordRecovery, repository, session, status],
+    [recoveryCode, repository, status, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

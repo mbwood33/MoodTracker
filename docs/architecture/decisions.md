@@ -28,7 +28,7 @@ The source tree separates presentation (`app`, `pages`, `components`,
 Dependencies point inward toward the domain; domain modules cannot import React
 or either data implementation.
 
-Dexie will be the immediate persistence boundary for user writes. Supabase is a
+Dexie will be the immediate persistence boundary for user writes. Firebase is a
 remote replica and account service, coordinated by `sync`; it is not the entry
 save target. The Phase 0 folders document these rules without prematurely
 inventing an IndexedDB schema before the Phase 1 entry model exists.
@@ -42,7 +42,7 @@ inventing an IndexedDB schema before the Phase 1 entry model exists.
 - Dexie will own durable local application records and pending mutations.
 - TanStack Query owns remote request state and cache lifecycles, with
   `offlineFirst` network mode as a safe default.
-- Supabase owns authenticated remote persistence after synchronization.
+- Firebase owns authenticated remote persistence after synchronization.
 
 TanStack Query is not a substitute for IndexedDB and its cache is never the sole
 copy of unsynchronized user data. No additional global state library is added
@@ -92,21 +92,20 @@ Phase 0 does not cache API data, implement background sync, or send push
 notifications. Those require the versioned mutation queue and reminder design
 from later phases.
 
-## ADR-007: Environment and Supabase boundary
+## ADR-007: Environment and Firebase boundary
 
 **Status:** Accepted
 
 Only public browser configuration uses Vite environment variables. Zod validates
-the public contract, and Supabase URL/key must appear together. The browser
+the public contract, and all Firebase web app values must appear together. The browser
 client is lazy and optional so the shell remains runnable without a network or
 backend. Administrative secrets are explicitly forbidden from `VITE_` values.
 
-The versioned Supabase CLI is a development dependency. Its checked-in config,
-seed file, and first migration make database recreation deterministic. The
-foundation migration creates only a revoked `private` schema; application tables
-and their mandatory Row Level Security policies arrive together in Phase 1.
-Development and production examples are separate and real credentials are
-ignored by Git.
+The versioned Firebase CLI is a development dependency. Checked-in emulator,
+Hosting, Firestore, Storage, index, and Security Rules configuration makes local
+development deterministic. The default project alias is a safe `demo-` project
+that cannot reach production services. Development and production examples are
+separate and real credentials are ignored by Git.
 
 ## ADR-008: Rich content, charts, and maps are deferred integrations
 
@@ -167,8 +166,10 @@ cannot replace an entry that still has a local queued mutation. This is a
 deliberately conservative Phase 1 conflict posture: it preserves both sides for
 later explicit resolution rather than silently losing an edit.
 
-Supabase owns account identity and has a paired `profiles` record. Every
-user-owned table has RLS enabled. The mutation RPC checks ownership and expected
-revision atomically; it returns a serialization conflict instead of applying a
-blind last-write-wins update. Presentation code stays persistence-agnostic via a
-feature adapter supplied by application composition.
+Firebase Authentication owns account identity and each account has a paired
+`users/{uid}` profile document. Entries live in the owner's `moodEntries`
+subcollection and Firestore Security Rules deny cross-account access. A
+Firestore transaction checks ownership and the expected revision atomically;
+it returns a conflict instead of applying a blind last-write-wins update.
+Presentation code stays persistence-agnostic via a feature adapter supplied by
+application composition.
