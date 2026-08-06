@@ -51,13 +51,9 @@ export function AuthCard() {
         setMessage('Signed in.');
         navigate('/', { replace: true });
       } else {
-        const session = await signUp(values);
-        setMessage(
-          session
-            ? 'Account created and signed in.'
-            : 'Check your email to confirm your account, then sign in.',
-        );
-        if (session) navigate('/', { replace: true });
+        await signUp(values);
+        setMessage('Account created and signed in.');
+        navigate('/', { replace: true });
       }
     } catch (caught) {
       setError(
@@ -128,8 +124,9 @@ export function AuthCard() {
 
       {!isConfigured ? (
         <p className="text-muted-foreground mt-5 text-sm leading-6">
-          Supabase is not configured yet. Add the public URL and publishable key
-          to the active Vite environment before creating an account.
+          Firebase is not configured yet. Add the public Firebase web app
+          configuration to the active Vite environment before creating an
+          account.
         </p>
       ) : isPasswordRecovery ? (
         <form className="mt-5 grid gap-4" onSubmit={completePasswordReset}>

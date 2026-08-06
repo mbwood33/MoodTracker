@@ -28,12 +28,12 @@ test('persists a dark theme selection', async ({ page }) => {
   await expect(page.locator('html')).toHaveClass(/dark/);
 });
 
-test('offers account setup when Supabase is not configured', async ({
+test('offers account setup when Firebase is not configured', async ({
   page,
 }) => {
   await page.goto('/auth');
 
-  await expect(page.getByText('Supabase is not configured yet.')).toBeVisible();
+  await expect(page.getByText('Firebase is not configured yet.')).toBeVisible();
 });
 
 test('reloads a deep route from the cached shell while offline', async ({

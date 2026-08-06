@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 
-import type { Session, User } from '@supabase/supabase-js';
+import type { User } from 'firebase/auth';
 
 import type { SignUpInput } from '@/data/remote/auth-repository';
 
@@ -9,10 +9,9 @@ export type AuthStatus =
 
 export type AuthContextValue = {
   status: AuthStatus;
-  session: Session | null;
   user: User | null;
   isPasswordRecovery: boolean;
-  signUp: (input: SignUpInput) => Promise<Session | null>;
+  signUp: (input: SignUpInput) => Promise<User>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;

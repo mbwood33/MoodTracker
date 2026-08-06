@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "moodtracker-c90e3",
+    "development": "demo-mood-tracker"
+  }
+}

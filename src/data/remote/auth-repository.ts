@@ -1,6 +1,17 @@
-import type { Session, User } from '@supabase/supabase-js';
+import {
+  confirmPasswordReset,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signOut,
+  updatePassword as updateFirebasePassword,
+  updateProfile,
+  type Auth,
+  type User,
+} from 'firebase/auth';
+import { doc, setDoc, type Firestore } from 'firebase/firestore';
 
-import { getSupabaseClient } from './supabase';
+import { getFirebaseServices } from './firebase';
 
 export interface SignUpInput {
   email: string;
@@ -8,70 +19,96 @@ export interface SignUpInput {
   displayName?: string;
 }
 
-/**
- * Auth stays behind the remote boundary so components never handle the raw
- * Supabase client. Supabase's profile trigger creates the paired profile.
- */
-export class SupabaseAuthRepository {
-  async signUp(
-    input: SignUpInput,
-  ): Promise<{ user: User | null; session: Session | null }> {
-    const { data, error } = await this.requireClient().auth.signUp({
-      email: input.email,
-      password: input.password,
-      options: {
-        data: input.displayName
-          ? { display_name: input.displayName }
-          : undefined,
-      },
+export class FirebaseAuthRepository {
+  async signUp(input: SignUpInput): Promise<User> {
+    const { auth, firestore } = this.requireServices();
+    const credential = await createUserWithEmailAndPassword(
+      auth,
+      input.email,
+      input.password,
+    ).catch((error: unknown) => {
+      throw this.authError('Unable to create account', error);
     });
-    if (error) throw new Error(`Unable to create account: ${error.message}`);
-    return data;
+
+    const displayName = input.displayName?.trim() || null;
+    if (displayName) await updateProfile(credential.user, { displayName });
+    await this.createProfile(firestore, credential.user, displayName);
+    return credential.user;
   }
 
-  async signIn(email: string, password: string): Promise<Session> {
-    const { data, error } = await this.requireClient().auth.signInWithPassword({
+  async signIn(email: string, password: string): Promise<User> {
+    const { auth } = this.requireServices();
+    const credential = await signInWithEmailAndPassword(
+      auth,
       email,
       password,
+    ).catch((error: unknown) => {
+      throw this.authError('Unable to sign in', error);
     });
-    if (error) throw new Error(`Unable to sign in: ${error.message}`);
-    return data.session;
+    return credential.user;
   }
 
   async signOut(): Promise<void> {
-    const { error } = await this.requireClient().auth.signOut();
-    if (error) throw new Error(`Unable to sign out: ${error.message}`);
+    const { auth } = this.requireServices();
+    await signOut(auth).catch((error: unknown) => {
+      throw this.authError('Unable to sign out', error);
+    });
   }
 
   async sendPasswordReset(email: string, redirectTo: string): Promise<void> {
-    const { error } = await this.requireClient().auth.resetPasswordForEmail(
-      email,
-      {
-        redirectTo,
-      },
-    );
-    if (error)
-      throw new Error(`Unable to send password reset: ${error.message}`);
+    const { auth } = this.requireServices();
+    await sendPasswordResetEmail(auth, email, {
+      url: redirectTo,
+      handleCodeInApp: true,
+    }).catch((error: unknown) => {
+      throw this.authError('Unable to send password reset', error);
+    });
   }
 
-  async updatePassword(password: string): Promise<void> {
-    const { error } = await this.requireClient().auth.updateUser({ password });
-    if (error) throw new Error(`Unable to update password: ${error.message}`);
+  async updatePassword(password: string, recoveryCode?: string): Promise<void> {
+    const { auth } = this.requireServices();
+    try {
+      if (recoveryCode) {
+        await confirmPasswordReset(auth, recoveryCode, password);
+        return;
+      }
+      if (!auth.currentUser) throw new Error('Authentication is required.');
+      await updateFirebasePassword(auth.currentUser, password);
+    } catch (error) {
+      throw this.authError('Unable to update password', error);
+    }
   }
 
-  async getSession(): Promise<Session | null> {
-    const { data, error } = await this.requireClient().auth.getSession();
-    if (error) throw new Error(`Unable to retrieve session: ${error.message}`);
-    return data.session;
+  private async createProfile(
+    firestore: Firestore,
+    user: User,
+    displayName: string | null,
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    await setDoc(doc(firestore, 'users', user.uid), {
+      displayName,
+      email: user.email,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      locale: navigator.language || 'en-US',
+      theme: 'system',
+      weekStartDay: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
   }
 
-  private requireClient() {
-    const client = getSupabaseClient();
-    if (!client) {
+  private requireServices(): { auth: Auth; firestore: Firestore } {
+    const services = getFirebaseServices();
+    if (!services) {
       throw new Error(
-        'Supabase is not configured. Set both public Supabase environment values.',
+        'Firebase is not configured. Set the complete public Firebase configuration.',
       );
     }
-    return client;
+    return services;
+  }
+
+  private authError(action: string, error: unknown): Error {
+    const message = error instanceof Error ? error.message : 'Unknown error.';
+    return new Error(`${action}: ${message}`);
   }
 }

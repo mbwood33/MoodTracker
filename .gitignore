@@ -15,9 +15,11 @@ test-results/
 !.env.development.example
 !.env.production.example
 
-# Supabase local runtime state
-supabase/.branches/
-supabase/.temp/
+# Firebase local runtime state
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
 
 # Editors and operating systems
 .DS_Store

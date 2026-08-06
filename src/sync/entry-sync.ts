@@ -2,8 +2,8 @@ import type { MoodEntry } from '@/domain';
 import type { LocalEntryRepository, MutationOperation } from '@/data/local';
 
 /**
- * The remote boundary is deliberately small so Supabase remains replaceable and
- * the queue can be tested without network access.
+ * The remote boundary is deliberately small so the queue can be tested without
+ * network access and the local-first model remains independent of Firebase.
  */
 export interface RemoteEntryWriter {
   write(entry: MoodEntry, operation: MutationOperation): Promise<void>;

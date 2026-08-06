@@ -734,17 +734,17 @@ Use a custom service worker if reminder and synchronization requirements exceed 
 
 ### Backend
 
-Recommended initial backend: Supabase.
+Backend: Firebase.
 
 Use:
 
-- Supabase Auth
-- PostgreSQL
-- Supabase Storage
-- Row Level Security
-- Edge Functions
-- Supabase Cron
-- Optional PostGIS extension
+- Firebase Authentication
+- Cloud Firestore
+- Cloud Storage for Firebase
+- Firebase Security Rules
+- Cloud Functions for Firebase
+- Cloud Scheduler
+- Geohashes or a compatible geo-query library when map queries require them
 
 ### Local storage
 
@@ -806,11 +806,11 @@ Contains:
 
 Contains:
 
-- Supabase client
+- Firebase client
 - Authentication
-- PostgreSQL queries
+- Cloud Firestore queries
 - Storage uploads
-- Edge Function calls
+- Cloud Function calls
 - Push subscription registration
 
 ### Synchronization layer
@@ -1174,13 +1174,13 @@ Support:
 
 ### Database policies
 
-Enable Row Level Security on every user-owned table.
+Apply Firebase Security Rules to every user-owned collection and document path.
 
 Policies must ensure:
 
 - Users can read only their own records.
-- Users can create rows only with their own user ID.
-- Users can update or delete only their own rows.
+- Users can create documents only under their own user path and user ID.
+- Users can update or delete only their own documents.
 - Storage objects are accessible only to the owner.
 - Administrative credentials never appear in browser code.
 
@@ -1333,8 +1333,8 @@ Deliverables:
 - Automated tests
 - Environment configuration
 - Continuous integration
-- Supabase local-development configuration
-- Database migration system
+- Firebase Local Emulator Suite configuration
+- Versioned Firestore indexes and Security Rules
 - Basic design tokens
 - Mobile and desktop application shell
 
@@ -1342,7 +1342,7 @@ Exit criteria:
 
 - App runs locally.
 - Automated checks run on every change.
-- Database can be recreated from migrations.
+- Firebase services can be recreated from checked-in configuration and rules.
 - Development and production configuration are separated.
 
 ### Phase 1: Core mood entries
@@ -1545,7 +1545,7 @@ Prioritize:
 Cover:
 
 - Authentication
-- Row Level Security
+- Firebase Security Rules
 - Entry synchronization
 - Storage authorization
 - Media upload retry
@@ -1673,8 +1673,8 @@ When modifying this project:
 6. Keep mood forecasting explicitly experimental and non-clinical.
 7. Use the original local date and time zone for all day-based calculations.
 8. Add unit tests for every statistics formula.
-9. Add database migrations for every schema change.
-10. Apply Row Level Security to every user-owned database object.
+9. Version Firestore indexes, schema documentation, and Security Rules for every data-model change.
+10. Apply Firebase Security Rules to every user-owned collection and Storage path.
 11. Keep media private by default.
 12. Request permissions only in direct response to user actions.
 13. Maintain keyboard and screen-reader accessibility.
