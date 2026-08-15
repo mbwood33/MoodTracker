@@ -91,8 +91,8 @@ export function ImportPage() {
       <p className="text-muted-foreground mt-3 leading-7">
         Preview a CSV before saving. Required columns are <code>full_date</code>{' '}
         (m/d/yyyy), <code>time</code> (24-hour h:mm), <code>mood</code> (1–5),{' '}
-        <code>activites</code>, and <code>note</code>. Separate activity tags
-        with <code> | </code>.
+        and <code>note</code>. The <code>activites</code> column is optional;
+        when supplied, separate activity tags with <code> | </code>.
       </p>
 
       {status === 'loading' ? <p className="mt-8 text-sm">Loading…</p> : null}
