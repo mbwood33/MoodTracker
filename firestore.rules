@@ -37,6 +37,7 @@ service cloud.firestore {
           'id', 'userId', 'moodRating', 'energyRating', 'notePlainText',
           'noteJson',
           'activityTags',
+          'photo',
           'occurredAtUtc', 'occurredTimeZone', 'occurredLocalDate',
           'createdAt', 'updatedAt', 'deletedAt', 'revision',
           'clientMutationId'
@@ -53,6 +54,9 @@ service cloud.firestore {
         (!data.keys().hasAll(['noteJson']) || data.noteJson == null ||
           data.noteJson is map) &&
         (!data.keys().hasAll(['activityTags']) || data.activityTags is list) &&
+        (!data.keys().hasAll(['photo']) || data.photo == null ||
+          (data.photo is map && data.photo.keys().hasOnly(['id', 'storagePath']) &&
+            data.photo.id is string && data.photo.storagePath is string)) &&
         data.occurredAtUtc is string &&
         data.occurredTimeZone is string &&
         data.occurredLocalDate is string &&

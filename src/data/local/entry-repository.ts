@@ -28,7 +28,7 @@ export interface LocalEntryRepository {
 
 export class DexieLocalEntryRepository implements LocalEntryRepository {
   constructor(
-    private readonly database: MoodTrackerDatabase = getLocalDatabase(),
+    readonly database: MoodTrackerDatabase = getLocalDatabase(),
   ) {}
 
   async save(entry: MoodEntry): Promise<void> {

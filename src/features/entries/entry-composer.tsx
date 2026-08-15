@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CalendarClock, ChevronDown, Save } from 'lucide-react';
+import { CalendarClock, ChevronDown, ImagePlus, Save, X } from 'lucide-react';
 import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
@@ -8,6 +8,8 @@ import type { JSONContent } from '@tiptap/react';
 import { Button } from '@/components/ui/button';
 
 import { NoteEditor } from './note-editor';
+import { ActivityTagInput } from './activity-tag-input';
+import { normalizeActivityTags } from './activity-tags';
 
 import {
   energyLevels,
@@ -28,6 +30,7 @@ type EntryFormValues = z.infer<typeof entryFormSchema>;
 
 type EntryComposerProps = {
   entry?: MoodEntry;
+  tagSuggestions?: string[];
   onSubmit: (draft: EntryDraft) => Promise<void> | void;
   onCancel?: () => void;
 };
@@ -44,6 +47,7 @@ function currentTimeZone() {
 
 export function EntryComposer({
   entry,
+  tagSuggestions = [],
   onSubmit,
   onCancel,
 }: EntryComposerProps) {
@@ -51,6 +55,10 @@ export function EntryComposer({
   const [noteJson, setNoteJson] = useState<JSONContent | null>(
     entry?.noteJson ?? null,
   );
+  const [activityTags, setActivityTags] = useState(entry?.activityTags ?? []);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [removeExistingPhoto, setRemoveExistingPhoto] = useState(false);
   const form = useForm<EntryFormValues>({
     resolver: zodResolver(entryFormSchema),
     defaultValues: {
@@ -71,11 +79,14 @@ export function EntryComposer({
       moodRating: values.moodRating as MoodRating,
       note: values.note.trim(),
       noteJson,
+      activityTags: normalizeActivityTags(activityTags),
       energyRating:
         values.energyRating === '' ? null : (values.energyRating as MoodRating),
       occurredAt: new Date(values.occurredAt).toISOString(),
       occurredTimeZone: entry?.occurredTimeZone ?? currentTimeZone(),
       occurredLocalDate: values.occurredAt.slice(0, 10),
+      photo: removeExistingPhoto ? null : (entry?.photo ?? null),
+      photoFile,
     });
   });
 
@@ -161,6 +172,26 @@ export function EntryComposer({
               value={note}
             />
           </label>
+          <ActivityTagInput
+            value={activityTags}
+            suggestions={tagSuggestions}
+            onChange={setActivityTags}
+          />
+          <div className="grid gap-2 text-sm font-medium">
+            <span>Photo <span className="text-muted-foreground font-normal">(optional)</span></span>
+            {photoPreview ? (
+              <div className="relative w-fit">
+                <img className="h-28 w-28 rounded-xl object-cover" src={photoPreview} alt="Selected attachment preview" />
+                <Button className="absolute -right-2 -top-2" type="button" size="icon" variant="secondary" aria-label="Remove selected photo" onClick={() => { URL.revokeObjectURL(photoPreview); setPhotoPreview(null); setPhotoFile(null); }}><X className="size-4" /></Button>
+              </div>
+            ) : entry?.photo && !removeExistingPhoto ? (
+              <div className="flex items-center gap-2"><p className="text-muted-foreground text-sm">A photo is already attached. Selecting a new one replaces it.</p><Button type="button" variant="ghost" size="sm" onClick={() => setRemoveExistingPhoto(true)}>Remove photo</Button></div>
+            ) : null}
+            <label className="border-input bg-background flex h-10 w-fit cursor-pointer items-center gap-2 rounded-xl border px-3 text-sm">
+              <ImagePlus className="size-4" /> {photoFile || (entry?.photo && !removeExistingPhoto) ? 'Replace photo' : 'Choose photo'}
+              <input className="sr-only" type="file" accept="image/*" capture="environment" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 25 * 1024 * 1024) { form.setError('note', { message: 'Photos must be smaller than 25 MB.' }); return; } if (photoPreview) URL.revokeObjectURL(photoPreview); setRemoveExistingPhoto(false); setPhotoFile(file); setPhotoPreview(URL.createObjectURL(file)); }} />
+            </label>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-2 text-sm font-medium">
               <span>
