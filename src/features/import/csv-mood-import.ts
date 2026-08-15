@@ -1,10 +1,5 @@
-const requiredHeaders = [
-  'full_date',
-  'time',
-  'mood',
-  'activites',
-  'note',
-] as const;
+const requiredHeaders = ['full_date', 'time', 'mood', 'note'] as const;
+type CsvMoodHeader = (typeof requiredHeaders)[number] | 'activites';
 
 export type CsvMoodImportRow = {
   rowNumber: number;
@@ -129,7 +124,7 @@ export function parseMoodCsv(
     const record = records[recordIndex];
     if (!record) continue;
     const rowNumber = recordIndex + 1;
-    const get = (header: (typeof requiredHeaders)[number]) =>
+    const get = (header: CsvMoodHeader) =>
       record[positions[header] ?? -1]?.trim() ?? '';
     const timestamp = parseDateTime(get('full_date'), get('time'));
     const mood = Number(get('mood'));

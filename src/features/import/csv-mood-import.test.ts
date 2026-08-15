@@ -25,4 +25,15 @@ describe('parseMoodCsv', () => {
     expect(result.rows).toHaveLength(1);
     expect(result.errors).toHaveLength(1);
   });
+
+  it('imports rows without an activites column as untagged entries', () => {
+    const result = parseMoodCsv(
+      'full_date,time,mood,note\n8/5/2026,14:30,5,Feeling great',
+      'UTC',
+    );
+
+    expect(result.errors).toEqual([]);
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]?.activityTags).toEqual([]);
+  });
 });
