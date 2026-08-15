@@ -13,15 +13,15 @@ storage, and Firebase synchronization.
 
 ## Start locally with Firebase emulators
 
-```bash
+```powershell
 npm install
-copy .env.development.example .env.development
+Copy-Item .env.development.example .env.development
 npm run firebase:emulators
 ```
 
 In a second terminal:
 
-```bash
+```powershell
 npm run dev
 ```
 
@@ -29,6 +29,19 @@ The emulator command explicitly uses the safe `demo-mood-tracker` project ID.
 A `demo-` project cannot reach live Firebase resources if an emulator is
 missing. The default deployment target is `moodtracker-c90e3`, and the Emulator
 Suite UI is at `http://127.0.0.1:4000`.
+
+The development environment deliberately uses the `demo-mood-tracker` project
+and localhost emulator ports, so it does not use Firebase production resources
+or Netlify. Java 21 is required by the current Firestore emulator; verify it
+with `java -version` before starting the suite.
+
+To run the deterministic local Firebase checks (they start and stop isolated
+Auth and Firestore emulators automatically):
+
+```powershell
+npm run test:rules
+npm run test:emulators
+```
 
 The unconfigured shell can also be explored without Firebase. Accounts and
 cross-device synchronization require either the emulators or a configured live
@@ -50,21 +63,23 @@ or other secrets in a `VITE_` variable.
 
 ## Commands
 
-| Command                           | Purpose                                          |
-| --------------------------------- | ------------------------------------------------ |
-| `npm run dev`                     | Start Vite at `http://127.0.0.1:5173`            |
-| `npm run build`                   | Type-check and create the production PWA bundle  |
-| `npm run preview`                 | Serve the built bundle at port 4173              |
-| `npm run lint`                    | Run ESLint, including accessibility rules        |
-| `npm run format`                  | Format supported files with Prettier             |
-| `npm run typecheck`               | Run strict TypeScript project checks             |
-| `npm run test:run`                | Run Vitest once                                  |
-| `npm run test:e2e`                | Run desktop and mobile Playwright projects       |
-| `npm run check`                   | Run the local CI-equivalent checks except E2E    |
-| `npm run firebase:emulators`      | Start Auth, Firestore, Storage, and Hosting      |
-| `npm run firebase:deploy:rules`   | Deploy Firestore and Storage rules               |
-| `npm run firebase:deploy:hosting` | Build and deploy Hosting only                    |
-| `npm run firebase:deploy`         | Build and deploy all configured Firebase targets |
+| Command                           | Purpose                                           |
+| --------------------------------- | ------------------------------------------------- |
+| `npm run dev`                     | Start Vite at `http://127.0.0.1:5173`             |
+| `npm run build`                   | Type-check and create the production PWA bundle   |
+| `npm run preview`                 | Serve the built bundle at port 4173               |
+| `npm run lint`                    | Run ESLint, including accessibility rules         |
+| `npm run format`                  | Format supported files with Prettier              |
+| `npm run typecheck`               | Run strict TypeScript project checks              |
+| `npm run test:run`                | Run Vitest once                                   |
+| `npm run test:rules`              | Run Firestore Security Rules tests in an emulator |
+| `npm run test:emulators`          | Run local Auth + Firestore integration checks     |
+| `npm run test:e2e`                | Run desktop and mobile Playwright projects        |
+| `npm run check`                   | Run the local CI-equivalent checks except E2E     |
+| `npm run firebase:emulators`      | Start Auth, Firestore, Storage, and Hosting       |
+| `npm run firebase:deploy:rules`   | Deploy Firestore and Storage rules                |
+| `npm run firebase:deploy:hosting` | Build and deploy Hosting only                     |
+| `npm run firebase:deploy`         | Build and deploy all configured Firebase targets  |
 
 Install Playwright's Chromium browser once with
 `npx playwright install chromium` before running E2E tests locally.

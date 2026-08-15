@@ -46,4 +46,39 @@ describe('EntryWorkspaceContainer', () => {
     expect(await screen.findByText('Good')).toBeInTheDocument();
     expect(await screen.findByText('saved locally')).toBeInTheDocument();
   });
+
+  it('keeps a pending entry safe when a manual synchronization retry is requested', async () => {
+    const user = userEvent.setup();
+    render(<EntryWorkspaceContainer userId={userId} />);
+
+    await user.click(screen.getByText('Good', { selector: 'span' }));
+    await user.click(screen.getByRole('button', { name: 'Save entry' }));
+
+    const retry = await screen.findByRole('button', {
+      name: 'Retry synchronization',
+    });
+    await user.click(retry);
+
+    expect(await screen.findByText('Saved locally')).toBeInTheDocument();
+    expect(await screen.findByText('saved locally')).toBeInTheDocument();
+  });
+
+  it('restores a soft-deleted entry through the local persistence adapter', async () => {
+    const user = userEvent.setup();
+    const firstRender = render(<EntryWorkspaceContainer userId={userId} />);
+
+    await user.click(screen.getByText('Good', { selector: 'span' }));
+    await user.click(screen.getByRole('button', { name: 'Save entry' }));
+    await user.click(await screen.findByRole('button', { name: 'Delete' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Restore entry' }),
+    );
+
+    firstRender.unmount();
+    render(<EntryWorkspaceContainer userId={userId} />);
+
+    expect(
+      await screen.findByRole('button', { name: 'Delete' }),
+    ).toBeInTheDocument();
+  });
 });

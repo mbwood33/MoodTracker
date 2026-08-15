@@ -13,7 +13,13 @@ export const moodEntrySchema = z.object({
   userId: z.string().min(1).max(128),
   moodRating: moodRatingSchema,
   energyRating: moodRatingSchema.nullable(),
+  // Kept separately from the searchable/export-friendly plain-text projection.
+  // The default accepts records written before rich notes were added.
+  noteJson: z.record(z.string(), z.unknown()).nullable().optional(),
   notePlainText: z.string().max(100_000),
+  // Tags are kept with the entry for now so imports preserve their source
+  // information while the dedicated hashtag collection is introduced.
+  activityTags: z.array(z.string().min(1).max(120)).optional(),
   occurredAtUtc: isoTimestampSchema,
   occurredTimeZone: timeZoneSchema,
   // This is deliberately persisted instead of derived from UTC. It is the
@@ -33,12 +39,19 @@ export const createMoodEntryInputSchema = moodEntrySchema
     userId: true,
     moodRating: true,
     energyRating: true,
+    noteJson: true,
     notePlainText: true,
+    activityTags: true,
     occurredAtUtc: true,
     occurredTimeZone: true,
     occurredLocalDate: true,
   })
-  .partial({ energyRating: true, notePlainText: true })
+  .partial({
+    energyRating: true,
+    noteJson: true,
+    notePlainText: true,
+    activityTags: true,
+  })
   .strict();
 
 export type CreateMoodEntryInput = z.input<typeof createMoodEntryInputSchema>;
@@ -79,7 +92,9 @@ export function createMoodEntry(
     ...parsed,
     id: createId.createId(),
     energyRating: parsed.energyRating ?? null,
+    noteJson: parsed.noteJson ?? null,
     notePlainText: parsed.notePlainText ?? '',
+    activityTags: parsed.activityTags ?? [],
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -107,6 +122,12 @@ export function updateMoodEntry(
       changes.notePlainText === undefined
         ? entry.notePlainText
         : changes.notePlainText,
+    noteJson:
+      changes.noteJson === undefined ? entry.noteJson : changes.noteJson,
+    activityTags:
+      changes.activityTags === undefined
+        ? entry.activityTags
+        : changes.activityTags,
     updatedAt: (dependencies.clock ?? systemClock).now().toISOString(),
     revision: entry.revision + 1,
     clientMutationId: createId.createId(),

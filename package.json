@@ -15,6 +15,7 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:rules": "firebase emulators:exec --only firestore --project demo-mood-tracker \"vitest run --config vitest.rules.config.ts\"",
+    "test:emulators": "firebase emulators:exec --only auth,firestore --project demo-mood-tracker \"vitest run --config vitest.emulator.config.ts\"",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:run && npm run build",

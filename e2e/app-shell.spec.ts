@@ -45,6 +45,7 @@ test('reloads a deep route from the cached shell while offline', async ({
     await navigator.serviceWorker.ready;
   });
   await page.reload();
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
 
   await context.setOffline(true);
   await page.reload();

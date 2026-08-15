@@ -1,12 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CalendarClock, ChevronDown, Save } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
+import type { JSONContent } from '@tiptap/react';
 
 import { Button } from '@/components/ui/button';
 
+import { NoteEditor } from './note-editor';
+
 import {
+  energyLevels,
   moods,
   type EntryDraft,
   type MoodEntry,
@@ -44,6 +48,9 @@ export function EntryComposer({
   onCancel,
 }: EntryComposerProps) {
   const [detailsOpen, setDetailsOpen] = useState(Boolean(entry));
+  const [noteJson, setNoteJson] = useState<JSONContent | null>(
+    entry?.noteJson ?? null,
+  );
   const form = useForm<EntryFormValues>({
     resolver: zodResolver(entryFormSchema),
     defaultValues: {
@@ -56,23 +63,14 @@ export function EntryComposer({
     },
   });
 
-  useEffect(() => {
-    form.reset({
-      moodRating: entry?.moodRating ?? 3,
-      note: entry?.note ?? '',
-      energyRating: entry?.energyRating ?? '',
-      occurredAt: entry
-        ? toDateTimeLocal(entry.occurredAt)
-        : toDateTimeLocal(new Date().toISOString()),
-    });
-  }, [entry, form]);
-
   const selectedMood = useWatch({ control: form.control, name: 'moodRating' });
+  const note = useWatch({ control: form.control, name: 'note' });
 
   const submit = form.handleSubmit(async (values) => {
     await onSubmit({
       moodRating: values.moodRating as MoodRating,
       note: values.note.trim(),
+      noteJson,
       energyRating:
         values.energyRating === '' ? null : (values.energyRating as MoodRating),
       occurredAt: new Date(values.occurredAt).toISOString(),
@@ -153,26 +151,32 @@ export function EntryComposer({
             <span className="text-muted-foreground font-normal">
               (optional)
             </span>
-            <textarea
-              className="border-input bg-background focus-visible:ring-ring min-h-28 rounded-xl border px-3 py-2 text-base outline-none focus-visible:ring-2"
-              placeholder="What's on your mind?"
-              {...form.register('note')}
+            <NoteEditor
+              document={noteJson}
+              onBlur={() => form.trigger('note')}
+              onChange={({ plainText, document }) => {
+                setNoteJson(document);
+                form.setValue('note', plainText, { shouldDirty: true });
+              }}
+              value={note}
             />
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-2 text-sm font-medium">
-              Energy{' '}
-              <span className="text-muted-foreground font-normal">
-                (optional)
+              <span>
+                Energy{' '}
+                <span className="text-muted-foreground font-normal">
+                  (optional)
+                </span>
               </span>
               <select
                 className="border-input bg-background h-10 rounded-xl border px-3"
                 {...form.register('energyRating')}
               >
                 <option value="">Not recorded</option>
-                {moods.map((mood) => (
-                  <option key={mood.rating} value={mood.rating}>
-                    {mood.rating} — {mood.label}
+                {energyLevels.map((energy) => (
+                  <option key={energy.rating} value={energy.rating}>
+                    {energy.rating} — {energy.label}
                   </option>
                 ))}
               </select>

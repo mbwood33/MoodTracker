@@ -35,6 +35,8 @@ service cloud.firestore {
         ]) &&
         data.keys().hasOnly([
           'id', 'userId', 'moodRating', 'energyRating', 'notePlainText',
+          'noteJson',
+          'activityTags',
           'occurredAtUtc', 'occurredTimeZone', 'occurredLocalDate',
           'createdAt', 'updatedAt', 'deletedAt', 'revision',
           'clientMutationId'
@@ -48,6 +50,9 @@ service cloud.firestore {
             data.energyRating >= 1 && data.energyRating <= 5)) &&
         data.notePlainText is string &&
         data.notePlainText.size() <= 100000 &&
+        (!data.keys().hasAll(['noteJson']) || data.noteJson == null ||
+          data.noteJson is map) &&
+        (!data.keys().hasAll(['activityTags']) || data.activityTags is list) &&
         data.occurredAtUtc is string &&
         data.occurredTimeZone is string &&
         data.occurredLocalDate is string &&
