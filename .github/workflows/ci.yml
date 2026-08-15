@@ -50,6 +50,9 @@ jobs:
       - name: Test Firebase Security Rules
         run: npm run test:rules
 
+      - name: Test Firebase Auth and Firestore emulators
+        run: npm run test:emulators
+
       - name: Build production bundle
         run: npm run build
 

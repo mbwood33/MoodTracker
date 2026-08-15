@@ -86,4 +86,48 @@ describe('DexieLocalEntryRepository', () => {
       2,
     );
   });
+
+  it('persists a restored entry and enqueues its synchronization mutation', async () => {
+    const database = createDatabase();
+    const repository = new DexieLocalEntryRepository(database);
+    const entries = new LocalFirstEntries(repository, {
+      identityFactory: { createId: () => crypto.randomUUID() },
+    });
+    const userId = '00000000-0000-4000-8000-000000000099';
+    const created = await entries.create({
+      userId,
+      moodRating: 2,
+      occurredAtUtc: '2026-08-05T18:30:00.000Z',
+      occurredTimeZone: 'America/Chicago',
+      occurredLocalDate: '2026-08-05',
+    });
+
+    await entries.remove(created.id);
+    const restored = await entries.restore(created.id);
+
+    database.close();
+    const reopened = new MoodTrackerDatabase(database.name);
+    databases.push(reopened);
+    const reopenedRepository = new DexieLocalEntryRepository(reopened);
+
+    await expect(reopenedRepository.listForUser(userId)).resolves.toEqual([
+      expect.objectContaining({ id: created.id, deletedAt: null }),
+    ]);
+    await expect(reopenedRepository.get(created.id)).resolves.toMatchObject({
+      revision: restored.revision,
+      clientMutationId: restored.clientMutationId,
+      deletedAt: null,
+    });
+    await expect(
+      reopenedRepository.getPendingMutations(userId),
+    ).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: restored.clientMutationId,
+          operation: 'upsert',
+          entry: expect.objectContaining({ deletedAt: null }),
+        }),
+      ]),
+    );
+  });
 });

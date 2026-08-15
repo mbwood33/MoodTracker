@@ -10,6 +10,10 @@ import {
   type EntryRepositoryAdapter,
   type MoodEntry,
 } from '@/features/entries';
+import {
+  SyncStatus,
+  type SynchronizationStatus,
+} from '@/features/sync/sync-status';
 import { LocalFirstEntries, synchronizePendingEntries } from '@/sync';
 
 type EntryWorkspaceContainerProps = {
@@ -17,7 +21,7 @@ type EntryWorkspaceContainerProps = {
   showTimeline?: boolean;
 };
 
-type SyncState = 'saved-locally' | 'synchronizing' | 'synchronized' | 'problem';
+type SyncState = SynchronizationStatus;
 
 function toFeatureEntry(
   entry: DomainMoodEntry,
@@ -27,6 +31,7 @@ function toFeatureEntry(
     id: entry.id,
     moodRating: entry.moodRating as MoodEntry['moodRating'],
     note: entry.notePlainText,
+    noteJson: entry.noteJson ?? null,
     energyRating: entry.energyRating as MoodEntry['energyRating'],
     occurredAt: entry.occurredAtUtc,
     occurredTimeZone: entry.occurredTimeZone,
@@ -42,6 +47,7 @@ function toDomainCreateInput(userId: string, draft: EntryDraft) {
   return {
     userId,
     moodRating: draft.moodRating,
+    noteJson: draft.noteJson,
     notePlainText: draft.note,
     energyRating: draft.energyRating,
     occurredAtUtc: draft.occurredAt,
@@ -69,16 +75,25 @@ export function EntryWorkspaceContainer({
   const syncing = useRef(false);
   const syncState = useRef<SyncState>('saved-locally');
   const [entries, setEntries] = useState<MoodEntry[]>([]);
+  const [status, setStatus] = useState<SyncState>('saved-locally');
+  const [pendingCount, setPendingCount] = useState(0);
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+
+  const updateSyncState = useCallback((nextState: SyncState) => {
+    syncState.current = nextState;
+    setStatus(nextState);
+  }, []);
 
   const loadEntries = useCallback(async () => {
     const [storedEntries, pending] = await Promise.all([
-      services.local.listForUser(userId),
+      services.local.listForUser(userId, true),
       services.local.getPendingMutations(userId),
     ]);
     const pendingEntryIds = new Set(
       pending.map((mutation) => mutation.entryId),
     );
 
+    setPendingCount(pending.length);
     setEntries(
       storedEntries.map((entry) =>
         toFeatureEntry(
@@ -93,65 +108,95 @@ export function EntryWorkspaceContainer({
     if (syncing.current) return;
 
     if (!navigator.onLine || !getFirebaseServices()) {
-      syncState.current = 'saved-locally';
+      updateSyncState('saved-locally');
       await loadEntries();
       return;
     }
 
     syncing.current = true;
-    syncState.current = 'synchronizing';
+    updateSyncState('synchronizing');
     try {
       const result = await synchronizePendingEntries(userId, {
         repository: services.local,
         remote: services.remote,
         reader: services.remote,
       });
-      syncState.current = result.failed > 0 ? 'problem' : 'synchronized';
+      updateSyncState(result.failed > 0 ? 'problem' : 'synchronized');
     } catch {
-      syncState.current = 'problem';
+      updateSyncState('problem');
     } finally {
       syncing.current = false;
       await loadEntries();
     }
-  }, [loadEntries, services, userId]);
+  }, [loadEntries, services, updateSyncState, userId]);
 
   useEffect(() => {
-    void loadEntries();
     const initialSync = window.setTimeout(() => void synchronize(), 0);
     return () => window.clearTimeout(initialSync);
-  }, [loadEntries, synchronize]);
+  }, [synchronize]);
 
   useEffect(() => {
-    const handleOnline = () => void synchronize();
+    const handleOnline = () => {
+      setIsOnline(true);
+      void synchronize();
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      updateSyncState('saved-locally');
+    };
     window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
-  }, [synchronize]);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [synchronize, updateSyncState]);
 
   const repository: EntryRepositoryAdapter = {
     entries,
     create: async (draft) => {
       await services.entries.create(toDomainCreateInput(userId, draft));
+      updateSyncState('saved-locally');
       await loadEntries();
       void synchronize();
     },
     update: async (entryId, draft) => {
       await services.entries.update(entryId, {
         moodRating: draft.moodRating,
+        noteJson: draft.noteJson,
         notePlainText: draft.note,
         energyRating: draft.energyRating,
         occurredAtUtc: draft.occurredAt,
         occurredTimeZone: draft.occurredTimeZone,
         occurredLocalDate: draft.occurredLocalDate,
       });
+      updateSyncState('saved-locally');
       await loadEntries();
       void synchronize();
     },
     remove: async (entryId) => {
       await services.entries.remove(entryId);
+      updateSyncState('saved-locally');
+      await loadEntries();
+      void synchronize();
+    },
+    restore: async (entryId) => {
+      await services.entries.restore(entryId);
+      updateSyncState('saved-locally');
       await loadEntries();
       void synchronize();
     },
   };
 
-  return <EntryWorkspace repository={repository} showTimeline={showTimeline} />;
+  return (
+    <div className="space-y-4">
+      <SyncStatus
+        isOnline={isOnline}
+        onRetry={() => void synchronize()}
+        pendingCount={pendingCount}
+        status={status}
+      />
+      <EntryWorkspace repository={repository} showTimeline={showTimeline} />
+    </div>
+  );
 }

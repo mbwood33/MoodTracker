@@ -51,6 +51,13 @@ export const router = createBrowserRouter([
           return { Component: MorePage };
         },
       },
+      {
+        path: 'import',
+        lazy: async () => {
+          const { ImportPage } = await import('@/pages/import-page');
+          return { Component: ImportPage };
+        },
+      },
     ],
   },
 ]);

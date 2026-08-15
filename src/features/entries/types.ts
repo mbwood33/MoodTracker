@@ -3,10 +3,13 @@
  * fields and adapts them to this stable feature shape.
  */
 export type MoodRating = 1 | 2 | 3 | 4 | 5;
+export type RichTextDocument = Record<string, unknown>;
 
 export type EntryDraft = {
   moodRating: MoodRating;
   note: string;
+  /** Tiptap document JSON. Null represents a legacy/plain-text-only note. */
+  noteJson: RichTextDocument | null;
   energyRating: MoodRating | null;
   occurredAt: string;
   occurredTimeZone: string;
@@ -26,6 +29,7 @@ export type EntryActions = {
   create: (draft: EntryDraft) => Promise<void> | void;
   update: (id: string, draft: EntryDraft) => Promise<void> | void;
   remove: (id: string) => Promise<void> | void;
+  restore: (id: string) => Promise<void> | void;
 };
 
 /**

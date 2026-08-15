@@ -73,6 +73,21 @@ export function EntryWorkspace({
             ),
           );
       },
+      restore: async (entry: MoodEntry) => {
+        if (repository) await repository.restore(entry.id);
+        else
+          setPreviewEntries((current) =>
+            current.map((item) =>
+              item.id === entry.id
+                ? {
+                    ...item,
+                    deletedAt: null,
+                    updatedAt: new Date().toISOString(),
+                  }
+                : item,
+            ),
+          );
+      },
     }),
     [onCreate, onDelete, onUpdate, repository],
   );
@@ -85,6 +100,7 @@ export function EntryWorkspace({
         </h2>
         <EntryComposer
           entry={editingEntry}
+          key={editingEntry?.id ?? 'new-entry'}
           onCancel={editingEntry ? () => setEditingEntry(undefined) : undefined}
           onSubmit={async (draft) => {
             if (editingEntry) {
@@ -103,6 +119,7 @@ export function EntryWorkspace({
             entries={currentEntries}
             onEdit={setEditingEntry}
             onDelete={(entry) => void actions.remove(entry)}
+            onRestore={(entry) => void actions.restore(entry)}
           />
         </section>
       ) : null}

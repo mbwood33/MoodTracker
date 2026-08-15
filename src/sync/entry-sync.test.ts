@@ -13,6 +13,7 @@ const entry: MoodEntry = {
   userId: '00000000-0000-4000-8000-000000000002',
   moodRating: 3,
   energyRating: null,
+  noteJson: null,
   notePlainText: '',
   occurredAtUtc: '2026-08-05T18:30:00.000Z',
   occurredTimeZone: 'America/Chicago',
