@@ -61,6 +61,22 @@ describe('mood entries', () => {
     expect(entry.notePlainText).toBe('Calm');
   });
 
+  it('de-duplicates activity tags without changing their first display casing', () => {
+    const entry = createMoodEntry(
+      {
+        userId: '00000000-0000-4000-8000-000000000099',
+        moodRating: 4,
+        activityTags: ['Walk', 'walk', ' Reading '],
+        occurredAtUtc: '2026-08-05T18:30:00.000Z',
+        occurredTimeZone: 'America/Chicago',
+        occurredLocalDate: '2026-08-05',
+      },
+      dependencies,
+    );
+
+    expect(entry.activityTags).toEqual(['Walk', 'Reading']);
+  });
+
   it('allows an optional energy rating to be cleared', () => {
     const entry = createMoodEntry(
       {

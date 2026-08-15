@@ -10,11 +10,15 @@ export type EntryDraft = {
   note: string;
   /** Tiptap document JSON. Null represents a legacy/plain-text-only note. */
   noteJson: RichTextDocument | null;
+  activityTags: string[];
   energyRating: MoodRating | null;
   occurredAt: string;
   occurredTimeZone: string;
   /** Preserved from the date-time field; never derive this from UTC. */
   occurredLocalDate: string;
+  photo?: { id: string; storagePath: string } | null;
+  /** Kept only until the local-first save completes; never sent to Firestore. */
+  photoFile?: File | null;
 };
 
 export type MoodEntry = EntryDraft & {

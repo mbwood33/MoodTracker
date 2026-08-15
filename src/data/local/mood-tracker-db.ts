@@ -25,11 +25,21 @@ export interface SyncMetadata {
   value: string;
   updatedAt: string;
 }
+export interface PendingPhotoUpload {
+  id: string;
+  entryId: string;
+  userId: string;
+  file: Blob;
+  fileName: string;
+  contentType: string;
+  createdAt: string;
+}
 
 export class MoodTrackerDatabase extends Dexie {
   moodEntries!: EntityTable<MoodEntry, 'id'>;
   entryMutations!: EntityTable<EntryMutation, 'id'>;
   syncMetadata!: EntityTable<SyncMetadata, 'key'>;
+  pendingPhotoUploads!: EntityTable<PendingPhotoUpload, 'id'>;
 
   constructor(name = 'mood-tracker') {
     super(name);
@@ -42,6 +52,12 @@ export class MoodTrackerDatabase extends Dexie {
       entryMutations:
         'id, userId, entryId, status, createdAt, [userId+status], [entryId+createdAt]',
       syncMetadata: 'key',
+    });
+    this.version(2).stores({
+      moodEntries: 'id, userId, occurredAtUtc, occurredLocalDate, deletedAt, [userId+occurredAtUtc], [userId+occurredLocalDate]',
+      entryMutations: 'id, userId, entryId, status, createdAt, [userId+status], [entryId+createdAt]',
+      syncMetadata: 'key',
+      pendingPhotoUploads: 'id, entryId, userId, createdAt, [userId+createdAt]',
     });
   }
 }

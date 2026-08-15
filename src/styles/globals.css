@@ -20,6 +20,29 @@
   --destructive: oklch(0.59 0.23 25);
   --destructive-foreground: oklch(0.985 0 0);
   --success: oklch(0.65 0.17 154);
+  /* Mood scale: 1 (Awful) through 5 (Rad). Keep these semantic tokens in
+     sync anywhere a chart, face, or distribution indicator uses mood color. */
+  --mood-awful: oklch(0.64 0.2 12);
+  --mood-bad: oklch(0.72 0.18 52);
+  --mood-meh: oklch(0.8 0.16 86);
+  --mood-good: oklch(0.75 0.18 132);
+  --mood-rad: oklch(0.65 0.18 158);
+  --mood-chart-gradient: linear-gradient(
+    to top,
+    var(--mood-awful) 0%,
+    var(--mood-bad) 25%,
+    var(--mood-meh) 50%,
+    var(--mood-good) 75%,
+    var(--mood-rad) 100%
+  );
+  --mood-chart-gradient-horizontal: linear-gradient(
+    to right,
+    var(--mood-awful) 0%,
+    var(--mood-bad) 25%,
+    var(--mood-meh) 50%,
+    var(--mood-good) 75%,
+    var(--mood-rad) 100%
+  );
   --border: oklch(0.89 0.018 292);
   --input: oklch(0.89 0.018 292);
   --ring: oklch(0.58 0.245 288);
@@ -45,6 +68,11 @@
   --destructive: oklch(0.68 0.2 24);
   --destructive-foreground: oklch(0.98 0 0);
   --success: oklch(0.72 0.17 154);
+  --mood-awful: oklch(0.72 0.18 15);
+  --mood-bad: oklch(0.8 0.16 55);
+  --mood-meh: oklch(0.86 0.15 88);
+  --mood-good: oklch(0.81 0.17 132);
+  --mood-rad: oklch(0.74 0.16 158);
   --border: oklch(0.31 0.025 286);
   --input: oklch(0.31 0.025 286);
   --ring: oklch(0.72 0.185 290);
@@ -104,6 +132,92 @@ body {
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes stats-chart-slide-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes stats-chart-slide-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.stats-chart-window--older {
+  animation: stats-chart-slide-from-left 220ms ease-out both;
+}
+
+.stats-chart-window--newer {
+  animation: stats-chart-slide-from-right 220ms ease-out both;
+}
+
+/*
+ * Stats chart helpers
+ *
+ * Use `.mood-chart-gradient` for an HTML legend/background and
+ * `.mood-chart-bar-gradient` on a bar element. SVG chart libraries can use
+ * the `--mood-*` tokens directly in a <linearGradient> definition, retaining
+ * the same five-point scale without duplicating colors in TypeScript.
+ */
+.mood-chart-gradient {
+  background: var(--mood-chart-gradient);
+}
+
+.mood-chart-gradient-horizontal {
+  background: var(--mood-chart-gradient-horizontal);
+}
+
+.mood-chart-bar-gradient {
+  background-color: var(--mood-meh);
+  background-image: var(--mood-chart-gradient);
+  background-position: center bottom;
+  /* Match the 115px full-scale mood chart height: rating 1 is rose, rating 5 reaches emerald. */
+  background-size: 100% 7.1875rem;
+}
+
+.mood-chart-fill-awful {
+  fill: var(--mood-awful);
+}
+.mood-chart-fill-bad {
+  fill: var(--mood-bad);
+}
+.mood-chart-fill-meh {
+  fill: var(--mood-meh);
+}
+.mood-chart-fill-good {
+  fill: var(--mood-good);
+}
+.mood-chart-fill-rad {
+  fill: var(--mood-rad);
+}
+
+.mood-chart-stroke-awful {
+  stroke: var(--mood-awful);
+}
+.mood-chart-stroke-bad {
+  stroke: var(--mood-bad);
+}
+.mood-chart-stroke-meh {
+  stroke: var(--mood-meh);
+}
+.mood-chart-stroke-good {
+  stroke: var(--mood-good);
+}
+.mood-chart-stroke-rad {
+  stroke: var(--mood-rad);
 }
 
 @media (prefers-reduced-motion: reduce) {

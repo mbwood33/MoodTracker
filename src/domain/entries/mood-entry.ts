@@ -20,6 +20,10 @@ export const moodEntrySchema = z.object({
   // Tags are kept with the entry for now so imports preserve their source
   // information while the dedicated hashtag collection is introduced.
   activityTags: z.array(z.string().min(1).max(120)).optional(),
+  photo: z
+    .object({ id: z.string().uuid(), storagePath: z.string().min(1) })
+    .nullable()
+    .optional(),
   occurredAtUtc: isoTimestampSchema,
   occurredTimeZone: timeZoneSchema,
   // This is deliberately persisted instead of derived from UTC. It is the
@@ -34,6 +38,19 @@ export const moodEntrySchema = z.object({
 
 export type MoodEntry = z.infer<typeof moodEntrySchema>;
 
+/** Removes blank and duplicate tags while retaining the first display spelling. */
+export function normalizeActivityTags(tags: readonly string[]): string[] {
+  const seen = new Set<string>();
+  return tags.reduce<string[]>((normalized, tag) => {
+    const displayName = tag.trim();
+    const key = displayName.toLocaleLowerCase();
+    if (!displayName || seen.has(key)) return normalized;
+    seen.add(key);
+    normalized.push(displayName);
+    return normalized;
+  }, []);
+}
+
 export const createMoodEntryInputSchema = moodEntrySchema
   .pick({
     userId: true,
@@ -42,6 +59,7 @@ export const createMoodEntryInputSchema = moodEntrySchema
     noteJson: true,
     notePlainText: true,
     activityTags: true,
+    photo: true,
     occurredAtUtc: true,
     occurredTimeZone: true,
     occurredLocalDate: true,
@@ -51,6 +69,7 @@ export const createMoodEntryInputSchema = moodEntrySchema
     noteJson: true,
     notePlainText: true,
     activityTags: true,
+    photo: true,
   })
   .strict();
 
@@ -94,7 +113,8 @@ export function createMoodEntry(
     energyRating: parsed.energyRating ?? null,
     noteJson: parsed.noteJson ?? null,
     notePlainText: parsed.notePlainText ?? '',
-    activityTags: parsed.activityTags ?? [],
+    activityTags: normalizeActivityTags(parsed.activityTags ?? []),
+    photo: parsed.photo ?? null,
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -124,10 +144,12 @@ export function updateMoodEntry(
         : changes.notePlainText,
     noteJson:
       changes.noteJson === undefined ? entry.noteJson : changes.noteJson,
-    activityTags:
+    activityTags: normalizeActivityTags(
       changes.activityTags === undefined
-        ? entry.activityTags
+        ? (entry.activityTags ?? [])
         : changes.activityTags,
+    ),
+    photo: changes.photo === undefined ? (entry.photo ?? null) : changes.photo,
     updatedAt: (dependencies.clock ?? systemClock).now().toISOString(),
     revision: entry.revision + 1,
     clientMutationId: createId.createId(),
