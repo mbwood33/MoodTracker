@@ -133,4 +133,41 @@ describe('entry synchronization', () => {
     });
     expect(applied).toEqual([entry.id]);
   });
+
+  it('batches new entries and avoids a read-before-write transaction', async () => {
+    const acknowledgements: string[] = [];
+    const repository: LocalEntryRepository = {
+      save: async () => undefined,
+      applyRemote: async () => false,
+      get: async () => undefined,
+      listForUser: async () => [],
+      getPendingMutations: async () => [
+        queuedMutation('mutation-1'),
+        { ...queuedMutation('mutation-2'), entry: { ...entry, id: 'second-entry' } },
+      ],
+      markMutationProcessing: async () => undefined,
+      acknowledgeMutation: async (id) => {
+        acknowledgements.push(id);
+      },
+      failMutation: async () => undefined,
+    };
+    const batches: MoodEntry[][] = [];
+
+    const result = await synchronizePendingEntries(entry.userId, {
+      repository,
+      remote: {
+        write: async () => {
+          throw new Error('The batch writer should be used.');
+        },
+        writeInitialEntries: async (entries) => {
+          batches.push([...entries]);
+        },
+      },
+    });
+
+    expect(result).toEqual({ attempted: 2, synchronized: 2, failed: 0, pulled: 0 });
+    expect(batches).toHaveLength(1);
+    expect(batches[0]).toHaveLength(2);
+    expect(acknowledgements).toEqual(['mutation-1', 'mutation-2']);
+  });
 });
