@@ -24,6 +24,8 @@ export interface LocalEntryRepository {
     attemptedAt: string,
     error: string,
   ): Promise<void>;
+  getSyncMetadata?(key: string): Promise<string | null>;
+  setSyncMetadata?(key: string, value: string): Promise<void>;
 }
 
 export class DexieLocalEntryRepository implements LocalEntryRepository {
@@ -159,6 +161,18 @@ export class DexieLocalEntryRepository implements LocalEntryRepository {
       mutation.status = 'failed';
       mutation.lastAttemptAt = attemptedAt;
       mutation.lastError = error;
+    });
+  }
+
+  async getSyncMetadata(key: string): Promise<string | null> {
+    return (await this.database.syncMetadata.get(key))?.value ?? null;
+  }
+
+  async setSyncMetadata(key: string, value: string): Promise<void> {
+    await this.database.syncMetadata.put({
+      key,
+      value,
+      updatedAt: new Date().toISOString(),
     });
   }
 }

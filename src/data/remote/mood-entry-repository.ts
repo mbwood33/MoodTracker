@@ -5,6 +5,7 @@ import {
   orderBy,
   query,
   runTransaction,
+  writeBatch,
   where,
   type Firestore,
 } from 'firebase/firestore';
@@ -95,6 +96,30 @@ export class FirebaseMoodEntryRepository {
   async write(entry: MoodEntry): Promise<void> {
     const result = await this.push(entry, Math.max(0, entry.revision - 1));
     if (result.status === 'conflict') throw new Error(result.message);
+  }
+
+  /**
+   * Commits newly-created entries without a read per document. The sync runner
+   * only uses this for revision-zero entries, whose UUIDs are generated locally.
+   */
+  async writeInitialEntries(entries: readonly MoodEntry[]): Promise<void> {
+    if (entries.length === 0) return;
+    const firestore = this.requireFirestore();
+    const batch = writeBatch(firestore);
+
+    for (const candidate of entries) {
+      this.assertAuthenticatedOwner(candidate.userId);
+      const parsed = moodEntrySchema.parse(candidate);
+      if (parsed.revision !== 0) {
+        throw new Error('Only newly-created entries can be batch synchronized.');
+      }
+      batch.set(
+        doc(firestore, 'users', parsed.userId, 'moodEntries', parsed.id),
+        parsed,
+      );
+    }
+
+    await batch.commit();
   }
 
   async pullChanges(updatedAfter: string | null): Promise<MoodEntry[]> {
