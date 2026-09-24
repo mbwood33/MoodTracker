@@ -21,7 +21,10 @@ function entry(revision = 0) {
     userId: ownerId,
     moodRating: 4,
     energyRating: null,
+    noteJson: null,
     notePlainText: 'A calm afternoon.',
+    activityTags: ['Walk', 'Outside'],
+    photo: null,
     occurredAtUtc: '2026-08-05T18:30:00.000Z',
     occurredTimeZone: 'America/Chicago',
     occurredLocalDate: '2026-08-05',
@@ -50,6 +53,21 @@ describe('Firestore ownership and entry invariants', () => {
 
     await assertSucceeds(setDoc(reference, entry()));
     await assertSucceeds(getDoc(reference));
+  });
+
+  it('accepts the current entry payload with photo metadata', async () => {
+    const database = environment.authenticatedContext(ownerId).firestore();
+    const reference = doc(database, 'users', ownerId, 'moodEntries', entryId);
+
+    await assertSucceeds(
+      setDoc(reference, {
+        ...entry(),
+        photo: {
+          id: '00000000-0000-4000-8000-000000000009',
+          storagePath: `users/${ownerId}/entries/${entryId}/photo.jpg`,
+        },
+      }),
+    );
   });
 
   it('denies another user access to an owner entry', async () => {

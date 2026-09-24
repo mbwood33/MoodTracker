@@ -54,8 +54,40 @@ describe('local Firebase Auth and Firestore emulators', () => {
 
     await setDoc(reference, profile);
 
+    const entryId = crypto.randomUUID();
+    const entryReference = doc(
+      firestore,
+      'users',
+      credential.user.uid,
+      'moodEntries',
+      entryId,
+    );
+    const entry = {
+      id: entryId,
+      userId: credential.user.uid,
+      moodRating: 4,
+      energyRating: null,
+      noteJson: null,
+      notePlainText: 'A calm afternoon.',
+      activityTags: ['Walk', 'Outside'],
+      photo: null,
+      occurredAtUtc: '2026-08-06T00:00:00.000Z',
+      occurredTimeZone: 'America/Chicago',
+      occurredLocalDate: '2026-08-05',
+      createdAt: '2026-08-06T00:00:00.000Z',
+      updatedAt: '2026-08-06T00:00:00.000Z',
+      deletedAt: null,
+      revision: 0,
+      clientMutationId: crypto.randomUUID(),
+    };
+
+    await setDoc(entryReference, entry);
+
     const snapshot = await getDoc(reference);
+    const entrySnapshot = await getDoc(entryReference);
     expect(snapshot.exists()).toBe(true);
     expect(snapshot.data()).toEqual(profile);
+    expect(entrySnapshot.exists()).toBe(true);
+    expect(entrySnapshot.data()).toEqual(entry);
   });
 });
