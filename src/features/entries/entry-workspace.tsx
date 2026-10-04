@@ -47,6 +47,7 @@ export function EntryWorkspace({
 }: EntryWorkspaceProps) {
   const [previewEntries, setPreviewEntries] = useState<MoodEntry[]>([]);
   const [editingEntry, setEditingEntry] = useState<MoodEntry | undefined>();
+  const [newEntryVersion, setNewEntryVersion] = useState(0);
   const [filters, setFilters] = useState(emptyEntryFilters);
   const currentEntries = repository?.entries ?? entries ?? previewEntries;
   const heading = editingEntry ? 'Edit entry' : 'Check in';
@@ -125,13 +126,16 @@ export function EntryWorkspace({
         <EntryComposer
           entry={editingEntry}
           tagSuggestions={tagSuggestions}
-          key={editingEntry?.id ?? 'new-entry'}
+          key={editingEntry?.id ?? `new-entry-${newEntryVersion}`}
           onCancel={editingEntry ? () => setEditingEntry(undefined) : undefined}
           onSubmit={async (draft) => {
             if (editingEntry) {
               await actions.update(editingEntry.id, draft);
               setEditingEntry(undefined);
-            } else await actions.create(draft);
+            } else {
+              await actions.create(draft);
+              setNewEntryVersion((version) => version + 1);
+            }
           }}
         />
       </section>

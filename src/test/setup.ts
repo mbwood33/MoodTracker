@@ -14,3 +14,21 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: () => false,
   }),
 });
+
+// ProseMirror measures caret coordinates through browser layout APIs that
+// JSDOM does not implement. Minimal geometry shims keep rich-text interaction
+// tests focused on editor behavior instead of synthetic layout failures.
+Object.defineProperty(document, 'elementFromPoint', {
+  configurable: true,
+  value: () => null,
+});
+Object.defineProperties(Range.prototype, {
+  getBoundingClientRect: {
+    configurable: true,
+    value: () => new DOMRect(),
+  },
+  getClientRects: {
+    configurable: true,
+    value: () => [],
+  },
+});

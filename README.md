@@ -47,6 +47,22 @@ The unconfigured shell can also be explored without Firebase. Accounts and
 cross-device synchronization require either the emulators or a configured live
 Firebase web app.
 
+## Start locally with the live Firebase account
+
+To use the same account and data as the live site while running the UI locally,
+put the live web-app configuration in `.env.development.local` and keep
+`VITE_USE_FIREBASE_EMULATORS=false`. If `.env.production` is already configured,
+PowerShell can create the local override with:
+
+```powershell
+Copy-Item .env.production .env.development.local
+npm run dev
+```
+
+Restart Vite after changing an environment file. The mode-specific local file
+takes precedence over the emulator defaults in `.env.development` and remains
+ignored by Git.
+
 ## Connect a live Firebase project
 
 1. Create or select a Firebase project and register a Web app.
@@ -91,7 +107,8 @@ contract:
 
 - `.env.development.example` targets the Local Emulator Suite.
 - `.env.production.example` documents live deployment values.
-- `.env.local` may override either mode on one machine and is ignored by Git.
+- `.env.development.local` overrides development mode on one machine and is
+  ignored by Git.
 
 All six `VITE_FIREBASE_*` browser configuration values must either be present
 together or omitted together. `VITE_USE_FIREBASE_EMULATORS=true` redirects Auth,

@@ -4,6 +4,7 @@ export type DailyMood = {
   date: string;
   average: number;
   entryCount: number;
+  distribution: readonly number[];
 };
 
 export type MoodStatistics = {
@@ -22,15 +23,23 @@ export function calculateMoodStatistics(
   currentLocalDate = formatDate(new Date()),
 ): MoodStatistics {
   const active = entries.filter((entry) => entry.deletedAt === null);
-  const byDate = new Map<string, { total: number; count: number }>();
+  const byDate = new Map<
+    string,
+    { total: number; count: number; distribution: number[] }
+  >();
   const distribution = [0, 0, 0, 0, 0];
 
   for (const entry of active) {
-    const day = byDate.get(entry.occurredLocalDate) ?? { total: 0, count: 0 };
+    const day = byDate.get(entry.occurredLocalDate) ?? {
+      total: 0,
+      count: 0,
+      distribution: [0, 0, 0, 0, 0],
+    };
     day.total += entry.moodRating;
     day.count += 1;
-    byDate.set(entry.occurredLocalDate, day);
     const index = entry.moodRating - 1;
+    day.distribution[index] = (day.distribution[index] ?? 0) + 1;
+    byDate.set(entry.occurredLocalDate, day);
     distribution[index] = (distribution[index] ?? 0) + 1;
   }
 
@@ -39,6 +48,7 @@ export function calculateMoodStatistics(
       date,
       average: value.total / value.count,
       entryCount: value.count,
+      distribution: value.distribution,
     }))
     .sort((left, right) => left.date.localeCompare(right.date));
   const averageDailyMood = dailyMoods.length

@@ -11,6 +11,13 @@ import { calculateMoodStatistics, type MoodStatistics } from '@/domain';
 import { DexieLocalEntryRepository } from '@/data/local';
 import { useAuth } from '@/features/auth';
 
+import {
+  buildChartDays,
+  summarizeChartDays,
+  type ChartDay,
+  type StatsRangeDays,
+} from './stats-page-utils';
+
 const moodLabels = ['Awful', 'Bad', 'Meh', 'Good', 'Rad'];
 const moodColors = [
   'var(--mood-awful)',
@@ -19,17 +26,15 @@ const moodColors = [
   'var(--mood-good)',
   'var(--mood-rad)',
 ];
-const chartWindowDays = 14;
-
 type ChartView = 'bar' | 'line';
 type ChartWindowDirection = 'older' | 'newer';
-type ChartDay = { date: string; average: number | null; entryCount: number };
 
 export function StatsPage() {
   const { status, user } = useAuth();
   const [stats, setStats] = useState<MoodStatistics | null>(null);
   const [loading, setLoading] = useState(Boolean(user));
   const [chartView, setChartView] = useState<ChartView>('bar');
+  const [rangeDays, setRangeDays] = useState<StatsRangeDays>(30);
   const [windowOffset, setWindowOffset] = useState(0);
   const [chartWindowDirection, setChartWindowDirection] =
     useState<ChartWindowDirection>('older');
@@ -52,8 +57,13 @@ export function StatsPage() {
   }, [load]);
 
   const chartDays = useMemo(
-    () => (stats ? buildChartDays(stats.dailyMoods, windowOffset) : []),
-    [stats, windowOffset],
+    () =>
+      stats ? buildChartDays(stats.dailyMoods, windowOffset, rangeDays) : [],
+    [rangeDays, stats, windowOffset],
+  );
+  const selectedPeriod = useMemo(
+    () => summarizeChartDays(chartDays),
+    [chartDays],
   );
 
   if (status === 'loading' || loading) return <LoadingState />;
@@ -65,7 +75,7 @@ export function StatsPage() {
     oldestDate && chartDays[0] && chartDays[0].date > oldestDate,
   );
   const maxEntries = Math.max(...chartDays.map((day) => day.entryCount), 1);
-  const chartWindowKey = chartDays[0]?.date ?? 'empty';
+  const chartWindowKey = `${rangeDays}-${chartDays[0]?.date ?? 'empty'}`;
 
   const showOlderEntries = () => {
     setChartWindowDirection('older');
@@ -76,10 +86,15 @@ export function StatsPage() {
     setChartWindowDirection('newer');
     setWindowOffset((offset) => Math.max(0, offset - 1));
   };
+  const changeRange = (nextRange: StatsRangeDays) => {
+    setRangeDays(nextRange);
+    setWindowOffset(0);
+    setChartWindowDirection('newer');
+  };
   const rangeLabel = `${formatDate(chartDays[0]?.date)} – ${formatDate(chartDays.at(-1)?.date)}`;
 
   return (
-    <section className="mx-auto max-w-5xl pb-8">
+    <section className="mx-auto max-w-5xl min-w-0 pb-8">
       <p className="text-primary text-sm font-medium">Stats</p>
       <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -123,8 +138,8 @@ export function StatsPage() {
         />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.35fr_1fr]">
-        <article className="border-border bg-card rounded-3xl border p-5 shadow-sm sm:p-6">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+        <article className="border-border bg-card min-w-0 overflow-hidden rounded-3xl border p-5 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">Daily mood</h2>
@@ -132,23 +147,40 @@ export function StatsPage() {
                 {rangeLabel}. Missing days remain gaps.
               </p>
             </div>
-            <div
-              className="bg-muted flex rounded-lg p-1"
-              aria-label="Chart type"
-              role="group"
-            >
-              <ChartToggle
-                active={chartView === 'bar'}
-                onClick={() => setChartView('bar')}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <label className="text-muted-foreground flex items-center gap-2 text-sm">
+                View
+                <select
+                  aria-label="Daily mood range"
+                  className="border-input bg-background text-foreground h-9 rounded-lg border px-2.5 text-sm"
+                  value={rangeDays}
+                  onChange={(event) =>
+                    changeRange(Number(event.target.value) as StatsRangeDays)
+                  }
+                >
+                  <option value={30}>30 days</option>
+                  <option value={60}>60 days</option>
+                  <option value={90}>90 days</option>
+                </select>
+              </label>
+              <div
+                className="bg-muted flex rounded-lg p-1"
+                aria-label="Chart type"
+                role="group"
               >
-                Bars
-              </ChartToggle>
-              <ChartToggle
-                active={chartView === 'line'}
-                onClick={() => setChartView('line')}
-              >
-                Smooth line
-              </ChartToggle>
+                <ChartToggle
+                  active={chartView === 'bar'}
+                  onClick={() => setChartView('bar')}
+                >
+                  Bars
+                </ChartToggle>
+                <ChartToggle
+                  active={chartView === 'line'}
+                  onClick={() => setChartView('line')}
+                >
+                  Smooth line
+                </ChartToggle>
+              </div>
             </div>
           </div>
           <div className="mt-4 flex items-center justify-between gap-3">
@@ -170,7 +202,7 @@ export function StatsPage() {
             </button>
           </div>
           <div
-            className={`stats-chart-window stats-chart-window--${chartWindowDirection}`}
+            className={`stats-chart-window stats-chart-window--${chartWindowDirection} min-w-0 overflow-hidden`}
             key={chartWindowKey}
           >
             {chartView === 'bar' ? (
@@ -186,18 +218,22 @@ export function StatsPage() {
           </p>
         </article>
 
-        <article className="border-border bg-card rounded-3xl border p-5 shadow-sm sm:p-6">
+        <article className="border-border bg-card min-w-0 rounded-3xl border p-5 shadow-sm sm:p-6">
           <h2 className="text-lg font-semibold">Mood distribution</h2>
           <p className="text-muted-foreground mt-1 text-sm">
-            How individual entries are rated.
+            How individual entries are rated from {rangeLabel}.
           </p>
           <div className="mt-6 space-y-4">
-            {stats.distribution.map((count, index) => (
+            {selectedPeriod.distribution.map((count, index) => (
               <div key={moodLabels[index]}>
                 <div className="mb-1.5 flex justify-between text-sm">
                   <span>{moodLabels[index]}</span>
                   <span className="text-muted-foreground">
-                    {count} · {Math.round((count / stats.entries) * 100)}%
+                    {count} ·{' '}
+                    {selectedPeriod.entries
+                      ? Math.round((count / selectedPeriod.entries) * 100)
+                      : 0}
+                    %
                   </span>
                 </div>
                 <div className="bg-muted h-2.5 overflow-hidden rounded-full">
@@ -205,7 +241,7 @@ export function StatsPage() {
                     className="h-full rounded-full"
                     style={{
                       backgroundColor: moodColors[index],
-                      width: `${(count / stats.entries) * 100}%`,
+                      width: `${selectedPeriod.entries ? (count / selectedPeriod.entries) * 100 : 0}%`,
                     }}
                   />
                 </div>
@@ -227,10 +263,10 @@ export function StatsPage() {
         <div
           aria-label="Logging activity in selected period"
           aria-live="polite"
-          className={`stats-chart-window stats-chart-window--${chartWindowDirection}`}
+          className={`stats-chart-window stats-chart-window--${chartWindowDirection} min-w-0 overflow-hidden`}
           key={chartWindowKey}
         >
-          <div className="mt-5 flex h-20 items-end gap-1.5">
+          <div className="mt-5 flex h-20 w-full min-w-0 items-end gap-px">
             {chartDays.map((day) => (
               <div
                 className="bg-secondary min-w-0 flex-1 rounded-t-md"
@@ -274,36 +310,41 @@ function ChartToggle({
 function MoodBarChart({ days }: { days: ChartDay[] }) {
   return (
     <div
-      className="mt-7 flex h-44 items-end gap-2"
+      className="mt-7 w-full min-w-0 overflow-hidden"
       aria-label="Daily mood bar chart"
     >
-      {days.map((day) => (
-        <div
-          className="group flex min-w-0 flex-1 flex-col items-center gap-2"
-          key={day.date}
-        >
-          {day.average === null ? (
-            <div
-              className="bg-muted mt-auto h-0.5 w-full"
-              title={`${day.date}: no entries`}
-            />
-          ) : (
-            <>
-              <div className="text-muted-foreground invisible text-[10px] whitespace-nowrap group-hover:visible">
-                {formatMood(day.average)}
-              </div>
+      <div className="flex h-40 w-full min-w-0 items-end gap-px">
+        {days.map((day) => (
+          <div
+            className="group relative flex h-full min-w-0 flex-1 items-end"
+            key={day.date}
+          >
+            {day.average === null ? (
               <div
-                className="mood-chart-bar-gradient w-full rounded-t-xl transition-opacity group-hover:opacity-80"
-                style={{ height: `${Math.max(12, (day.average / 5) * 115)}px` }}
-                title={`${day.date}: ${formatMood(day.average)} from ${day.entryCount} entries`}
+                className="bg-muted mt-auto h-0.5 w-full"
+                title={`${day.date}: no entries`}
               />
-            </>
-          )}
-          <span className="text-muted-foreground text-[10px]">
-            {day.date.slice(5)}
-          </span>
-        </div>
-      ))}
+            ) : (
+              <>
+                <div className="bg-card text-muted-foreground pointer-events-none absolute top-0 left-1/2 z-10 -translate-x-1/2 rounded px-1 text-[10px] whitespace-nowrap opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+                  {formatMood(day.average)}
+                </div>
+                <div
+                  className="mood-chart-bar-gradient w-full rounded-t-sm transition-opacity group-hover:opacity-80"
+                  style={{
+                    height: `${Math.max(12, (day.average / 5) * 115)}px`,
+                  }}
+                  title={`${day.date}: ${formatMood(day.average)} from ${day.entryCount} entries`}
+                />
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="text-muted-foreground mt-2 flex justify-between text-[10px]">
+        <span>{days[0]?.date}</span>
+        <span>{days.at(-1)?.date}</span>
+      </div>
     </div>
   );
 }
@@ -311,7 +352,10 @@ function MoodBarChart({ days }: { days: ChartDay[] }) {
 function MoodLineChart({ days }: { days: ChartDay[] }) {
   const paths = buildSmoothPaths(days);
   return (
-    <div className="mt-7 h-44" aria-label="Daily mood smooth line chart">
+    <div
+      className="mt-7 h-44 w-full min-w-0 overflow-hidden"
+      aria-label="Daily mood smooth line chart"
+    >
       <svg
         className="h-full w-full overflow-visible"
         preserveAspectRatio="none"
@@ -363,19 +407,6 @@ function MoodLineChart({ days }: { days: ChartDay[] }) {
             vectorEffect="non-scaling-stroke"
           />
         ))}
-        {days.map((day, index) =>
-          day.average === null ? null : (
-            <circle
-              cx={xFor(index, days.length)}
-              cy={yFor(day.average)}
-              key={day.date}
-              r="1.7"
-              fill={moodColorFor(day.average)}
-            >
-              <title>{`${day.date}: ${formatMood(day.average)} from ${day.entryCount} entries`}</title>
-            </circle>
-          ),
-        )}
       </svg>
       <div className="text-muted-foreground mt-2 flex justify-between text-[10px]">
         <span>{days[0]?.date}</span>
@@ -383,25 +414,6 @@ function MoodLineChart({ days }: { days: ChartDay[] }) {
       </div>
     </div>
   );
-}
-
-function buildChartDays(
-  dailyMoods: MoodStatistics['dailyMoods'],
-  offset: number,
-): ChartDay[] {
-  const last = dailyMoods.at(-1)?.date;
-  if (!last) return [];
-  const dayByDate = new Map(dailyMoods.map((day) => [day.date, day]));
-  const end = addLocalDays(last, -offset * chartWindowDays);
-  return Array.from({ length: chartWindowDays }, (_, index) => {
-    const date = addLocalDays(end, index - (chartWindowDays - 1));
-    const day = dayByDate.get(date);
-    return {
-      date,
-      average: day?.average ?? null,
-      entryCount: day?.entryCount ?? 0,
-    };
-  });
 }
 
 function buildSmoothPaths(days: ChartDay[]) {
@@ -436,15 +448,6 @@ function xFor(index: number, total: number) {
 }
 function yFor(average: number) {
   return 100 - ((Math.min(5, Math.max(1, average)) - 1) / 4) * 100;
-}
-function moodColorFor(average: number) {
-  const index = Math.min(4, Math.max(0, Math.round(average) - 1));
-  return moodColors[index]!;
-}
-function addLocalDays(date: string, amount: number) {
-  const value = new Date(`${date}T00:00:00.000Z`);
-  value.setUTCDate(value.getUTCDate() + amount);
-  return value.toISOString().slice(0, 10);
 }
 function formatDate(date: string | undefined) {
   return date

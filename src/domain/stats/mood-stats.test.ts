@@ -37,6 +37,7 @@ describe('calculateMoodStatistics', () => {
     expect(result.currentChain).toBe(1);
     expect(result.longestChain).toBe(2);
     expect(result.distribution).toEqual([1, 1, 0, 1, 1]);
+    expect(result.dailyMoods[0]?.distribution).toEqual([0, 1, 0, 1, 0]);
   });
 
   it('only reports a current chain that reaches today or yesterday', () => {

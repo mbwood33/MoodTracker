@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CalendarClock, ChevronDown, ImagePlus, Save, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import type { JSONContent } from '@tiptap/react';
@@ -74,6 +74,13 @@ export function EntryComposer({
   const selectedMood = useWatch({ control: form.control, name: 'moodRating' });
   const note = useWatch({ control: form.control, name: 'note' });
 
+  useEffect(
+    () => () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+    },
+    [photoPreview],
+  );
+
   const submit = form.handleSubmit(async (values) => {
     await onSubmit({
       moodRating: values.moodRating as MoodRating,
@@ -106,7 +113,7 @@ export function EntryComposer({
           aria-label="Mood"
         >
           {moods.map((mood) => {
-            const selected = selectedMood === mood.rating;
+            const selected = Number(selectedMood) === mood.rating;
             return (
               <label
                 className={`border-border hover:bg-accent flex min-h-20 cursor-pointer flex-col items-center justify-center rounded-2xl border px-1 text-center transition-colors ${
@@ -157,11 +164,13 @@ export function EntryComposer({
 
       {detailsOpen ? (
         <div className="mt-5 grid gap-4 border-t pt-5">
-          <label className="grid gap-2 text-sm font-medium">
-            Note{' '}
-            <span className="text-muted-foreground font-normal">
-              (optional)
-            </span>
+          <div className="grid gap-2">
+            <div className="text-sm font-medium">
+              Note{' '}
+              <span className="text-muted-foreground font-normal">
+                (optional)
+              </span>
+            </div>
             <NoteEditor
               document={noteJson}
               onBlur={() => form.trigger('note')}
@@ -171,25 +180,79 @@ export function EntryComposer({
               }}
               value={note}
             />
-          </label>
+          </div>
           <ActivityTagInput
             value={activityTags}
             suggestions={tagSuggestions}
             onChange={setActivityTags}
           />
           <div className="grid gap-2 text-sm font-medium">
-            <span>Photo <span className="text-muted-foreground font-normal">(optional)</span></span>
+            <span>
+              Photo{' '}
+              <span className="text-muted-foreground font-normal">
+                (optional)
+              </span>
+            </span>
             {photoPreview ? (
               <div className="relative w-fit">
-                <img className="h-28 w-28 rounded-xl object-cover" src={photoPreview} alt="Selected attachment preview" />
-                <Button className="absolute -right-2 -top-2" type="button" size="icon" variant="secondary" aria-label="Remove selected photo" onClick={() => { URL.revokeObjectURL(photoPreview); setPhotoPreview(null); setPhotoFile(null); }}><X className="size-4" /></Button>
+                <img
+                  className="h-28 w-28 rounded-xl object-cover"
+                  src={photoPreview}
+                  alt="Selected attachment preview"
+                />
+                <Button
+                  className="absolute -top-2 -right-2"
+                  type="button"
+                  size="icon"
+                  variant="secondary"
+                  aria-label="Remove selected photo"
+                  onClick={() => {
+                    setPhotoPreview(null);
+                    setPhotoFile(null);
+                  }}
+                >
+                  <X className="size-4" />
+                </Button>
               </div>
             ) : entry?.photo && !removeExistingPhoto ? (
-              <div className="flex items-center gap-2"><p className="text-muted-foreground text-sm">A photo is already attached. Selecting a new one replaces it.</p><Button type="button" variant="ghost" size="sm" onClick={() => setRemoveExistingPhoto(true)}>Remove photo</Button></div>
+              <div className="flex items-center gap-2">
+                <p className="text-muted-foreground text-sm">
+                  A photo is already attached. Selecting a new one replaces it.
+                </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setRemoveExistingPhoto(true)}
+                >
+                  Remove photo
+                </Button>
+              </div>
             ) : null}
             <label className="border-input bg-background flex h-10 w-fit cursor-pointer items-center gap-2 rounded-xl border px-3 text-sm">
-              <ImagePlus className="size-4" /> {photoFile || (entry?.photo && !removeExistingPhoto) ? 'Replace photo' : 'Choose photo'}
-              <input className="sr-only" type="file" accept="image/*" capture="environment" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 25 * 1024 * 1024) { form.setError('note', { message: 'Photos must be smaller than 25 MB.' }); return; } if (photoPreview) URL.revokeObjectURL(photoPreview); setRemoveExistingPhoto(false); setPhotoFile(file); setPhotoPreview(URL.createObjectURL(file)); }} />
+              <ImagePlus className="size-4" />{' '}
+              {photoFile || (entry?.photo && !removeExistingPhoto)
+                ? 'Replace photo'
+                : 'Choose photo'}
+              <input
+                className="sr-only"
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 25 * 1024 * 1024) {
+                    form.setError('note', {
+                      message: 'Photos must be smaller than 25 MB.',
+                    });
+                    return;
+                  }
+                  setRemoveExistingPhoto(false);
+                  setPhotoFile(file);
+                  setPhotoPreview(URL.createObjectURL(file));
+                }}
+              />
             </label>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">

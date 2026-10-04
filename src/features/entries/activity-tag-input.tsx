@@ -115,11 +115,11 @@ export function ActivityTagFilter({
   onChange,
 }: ActivityTagFilterProps) {
   return (
-    <label className="grid gap-1 text-sm font-medium">
+    <label className="grid min-w-0 gap-1 text-sm font-medium">
       Activity or tag
       <select
         aria-label="Filter by activity or tag"
-        className="border-input bg-background h-10 rounded-xl border px-3"
+        className="border-input bg-background h-10 w-full max-w-full min-w-0 rounded-xl border px-3"
         value={value}
         onChange={(event) => onChange(event.target.value)}
       >

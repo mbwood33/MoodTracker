@@ -1,5 +1,9 @@
-import { Underline } from '@tiptap/extension-underline';
-import { EditorContent, useEditor, type JSONContent } from '@tiptap/react';
+import {
+  EditorContent,
+  useEditor,
+  useEditorState,
+  type JSONContent,
+} from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import {
   Bold,
@@ -65,13 +69,14 @@ export function NoteEditor({
   onBlur,
 }: NoteEditorProps) {
   const editor = useEditor({
-    extensions: [StarterKit, Underline],
+    extensions: [StarterKit],
     content: document ?? value,
     editorProps: {
       attributes: {
         'aria-label': 'Note',
+        role: 'textbox',
         class:
-          'min-h-28 px-3 py-2 text-base outline-none prose prose-sm max-w-none dark:prose-invert',
+          'min-h-28 px-3 py-2 text-base font-normal outline-none prose prose-sm max-w-none dark:prose-invert',
       },
     },
     onUpdate: ({ editor: updatedEditor }) =>
@@ -80,6 +85,19 @@ export function NoteEditor({
         document: updatedEditor.getJSON(),
       }),
     onBlur: () => onBlur?.(),
+  });
+  const toolbarState = useEditorState({
+    editor,
+    selector: ({ editor: currentEditor }) => ({
+      bold: currentEditor?.isActive('bold') ?? false,
+      italic: currentEditor?.isActive('italic') ?? false,
+      underline: currentEditor?.isActive('underline') ?? false,
+      bulletList: currentEditor?.isActive('bulletList') ?? false,
+      orderedList: currentEditor?.isActive('orderedList') ?? false,
+      link: currentEditor?.isActive('link') ?? false,
+      canUndo: currentEditor?.can().undo() ?? false,
+      canRedo: currentEditor?.can().redo() ?? false,
+    }),
   });
 
   useEffect(() => {
@@ -112,56 +130,56 @@ export function NoteEditor({
         role="toolbar"
       >
         <ToolbarButton
-          active={editor.isActive('bold')}
+          active={toolbarState?.bold}
           label="Bold"
           onClick={() => editor.chain().focus().toggleBold().run()}
         >
           <Bold aria-hidden="true" className="size-4" />
         </ToolbarButton>
         <ToolbarButton
-          active={editor.isActive('italic')}
+          active={toolbarState?.italic}
           label="Italic"
           onClick={() => editor.chain().focus().toggleItalic().run()}
         >
           <Italic aria-hidden="true" className="size-4" />
         </ToolbarButton>
         <ToolbarButton
-          active={editor.isActive('underline')}
+          active={toolbarState?.underline}
           label="Underline"
           onClick={() => editor.chain().focus().toggleUnderline().run()}
         >
           <UnderlineIcon aria-hidden="true" className="size-4" />
         </ToolbarButton>
         <ToolbarButton
-          active={editor.isActive('bulletList')}
+          active={toolbarState?.bulletList}
           label="Bulleted list"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
         >
           <List aria-hidden="true" className="size-4" />
         </ToolbarButton>
         <ToolbarButton
-          active={editor.isActive('orderedList')}
+          active={toolbarState?.orderedList}
           label="Numbered list"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
         >
           <ListOrdered aria-hidden="true" className="size-4" />
         </ToolbarButton>
         <ToolbarButton
-          active={editor.isActive('link')}
+          active={toolbarState?.link}
           label="Add or remove link"
           onClick={toggleLink}
         >
           <Link2 aria-hidden="true" className="size-4" />
         </ToolbarButton>
         <ToolbarButton
-          disabled={!editor.can().chain().focus().undo().run()}
+          disabled={!toolbarState?.canUndo}
           label="Undo"
           onClick={() => editor.chain().focus().undo().run()}
         >
           <Undo2 aria-hidden="true" className="size-4" />
         </ToolbarButton>
         <ToolbarButton
-          disabled={!editor.can().chain().focus().redo().run()}
+          disabled={!toolbarState?.canRedo}
           label="Redo"
           onClick={() => editor.chain().focus().redo().run()}
         >
