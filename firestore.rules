@@ -67,6 +67,55 @@ service cloud.firestore {
         data.clientMutationId is string;
     }
 
+    function validReminder(data, userId, reminderId) {
+      return data.keys().hasAll([
+          'id', 'userId', 'localTime', 'daysOfWeek', 'timeZone', 'message',
+          'enabled', 'nextFireAt', 'createdAt', 'updatedAt', 'lastSentAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'userId', 'localTime', 'daysOfWeek', 'timeZone', 'message',
+          'enabled', 'nextFireAt', 'createdAt', 'updatedAt', 'lastSentAt',
+          'dispatchKey', 'dispatchLeaseUntil'
+        ]) &&
+        data.id == reminderId &&
+        data.userId == userId &&
+        data.localTime is string &&
+        data.localTime.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$') &&
+        data.daysOfWeek is list &&
+        data.daysOfWeek.size() > 0 && data.daysOfWeek.size() <= 7 &&
+        data.daysOfWeek.toSet().size() == data.daysOfWeek.size() &&
+        data.daysOfWeek.toSet().hasOnly([0, 1, 2, 3, 4, 5, 6]) &&
+        data.timeZone is string && data.timeZone.size() > 0 &&
+        data.timeZone.size() <= 100 &&
+        data.message is string && data.message.size() <= 180 &&
+        data.enabled is bool &&
+        ((data.enabled && data.nextFireAt is string) ||
+          (!data.enabled && data.nextFireAt == null)) &&
+        data.createdAt is string && data.updatedAt is string &&
+        (data.lastSentAt == null || data.lastSentAt is string) &&
+        (!data.keys().hasAll(['dispatchKey']) || data.dispatchKey == null ||
+          data.dispatchKey is string) &&
+        (!data.keys().hasAll(['dispatchLeaseUntil']) ||
+          data.dispatchLeaseUntil == null || data.dispatchLeaseUntil is string);
+    }
+
+    function validPushSubscription(data, userId, subscriptionId) {
+      return data.keys().hasAll([
+          'id', 'userId', 'token', 'deviceName', 'createdAt', 'updatedAt',
+          'lastUsedAt', 'disabledAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'userId', 'token', 'deviceName', 'createdAt', 'updatedAt',
+          'lastUsedAt', 'disabledAt'
+        ]) &&
+        data.id == subscriptionId && data.userId == userId &&
+        data.token is string && data.token.size() > 0 && data.token.size() <= 4096 &&
+        data.deviceName is string && data.deviceName.size() <= 100 &&
+        data.createdAt is string && data.updatedAt is string &&
+        data.lastUsedAt is string &&
+        (data.disabledAt == null || data.disabledAt is string);
+    }
+
     match /users/{userId} {
       allow read, delete: if isOwner(userId);
       allow create: if isOwner(userId) && validProfile(request.resource.data);
@@ -85,6 +134,33 @@ service cloud.firestore {
           request.resource.data.id == resource.data.id &&
           request.resource.data.createdAt == resource.data.createdAt &&
           request.resource.data.revision == resource.data.revision + 1;
+      }
+
+      match /reminders/{reminderId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+          validReminder(request.resource.data, userId, reminderId) &&
+          request.resource.data.lastSentAt == null &&
+          !request.resource.data.keys().hasAny([
+            'dispatchKey', 'dispatchLeaseUntil'
+          ]);
+        allow update: if isOwner(userId) &&
+          validReminder(request.resource.data, userId, reminderId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'localTime', 'daysOfWeek', 'timeZone', 'message', 'enabled',
+            'nextFireAt', 'updatedAt'
+          ]);
+      }
+
+      match /pushSubscriptions/{subscriptionId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+          validPushSubscription(request.resource.data, userId, subscriptionId);
+        allow update: if isOwner(userId) &&
+          validPushSubscription(request.resource.data, userId, subscriptionId) &&
+          request.resource.data.id == resource.data.id &&
+          request.resource.data.userId == resource.data.userId &&
+          request.resource.data.createdAt == resource.data.createdAt;
       }
     }
 

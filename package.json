@@ -18,10 +18,13 @@
     "test:emulators": "firebase emulators:exec --only auth,firestore --project demo-mood-tracker \"vitest run --config vitest.emulator.config.ts\"",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "functions:build": "npm --prefix functions run build",
+    "functions:test": "npm --prefix functions test",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:run && npm run build",
     "firebase:emulators": "firebase emulators:start --project demo-mood-tracker",
     "firebase:deploy": "npm run build && firebase deploy",
-    "firebase:deploy:rules": "firebase deploy --only firestore:rules,storage",
+    "firebase:deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage",
+    "firebase:deploy:reminders": "npm run functions:build && firebase deploy --only firestore:rules,firestore:indexes,functions",
     "firebase:deploy:hosting": "npm run build && firebase deploy --only hosting"
   },
   "engines": {

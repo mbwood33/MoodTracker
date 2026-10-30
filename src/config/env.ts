@@ -30,6 +30,7 @@ const envSchema = z
     VITE_FIREBASE_STORAGE_BUCKET: optionalString,
     VITE_FIREBASE_MESSAGING_SENDER_ID: optionalString,
     VITE_FIREBASE_APP_ID: optionalString,
+    VITE_FIREBASE_VAPID_KEY: optionalString,
     VITE_USE_FIREBASE_EMULATORS: optionalBoolean.default(false),
   })
   .superRefine((environment, context) => {

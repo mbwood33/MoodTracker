@@ -52,6 +52,13 @@ export const router = createBrowserRouter([
         },
       },
       {
+        path: 'reminders',
+        lazy: async () => {
+          const { RemindersPage } = await import('@/pages/reminders-page');
+          return { Component: RemindersPage };
+        },
+      },
+      {
         path: 'import',
         lazy: async () => {
           const { ImportPage } = await import('@/pages/import-page');

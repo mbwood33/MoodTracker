@@ -15,6 +15,7 @@ storage, and Firebase synchronization.
 
 ```powershell
 npm install
+npm --prefix functions install
 Copy-Item .env.development.example .env.development
 npm run firebase:emulators
 ```
@@ -69,7 +70,8 @@ ignored by Git.
 2. Enable Email/Password in Authentication.
 3. Create a Cloud Firestore database and a Cloud Storage bucket.
 4. Copy `.env.production.example` to `.env.local` and fill in the public Web app
-   configuration. Keep `VITE_USE_FIREBASE_EMULATORS=false`.
+   configuration, including the public Web Push VAPID key when reminders are
+   enabled. Keep `VITE_USE_FIREBASE_EMULATORS=false`.
 5. Confirm `moodtracker-c90e3` is the intended default project in `.firebaserc`.
 6. Deploy rules and Hosting with `npm run firebase:deploy`.
 
@@ -79,23 +81,26 @@ or other secrets in a `VITE_` variable.
 
 ## Commands
 
-| Command                           | Purpose                                           |
-| --------------------------------- | ------------------------------------------------- |
-| `npm run dev`                     | Start Vite at `http://127.0.0.1:5173`             |
-| `npm run build`                   | Type-check and create the production PWA bundle   |
-| `npm run preview`                 | Serve the built bundle at port 4173               |
-| `npm run lint`                    | Run ESLint, including accessibility rules         |
-| `npm run format`                  | Format supported files with Prettier              |
-| `npm run typecheck`               | Run strict TypeScript project checks              |
-| `npm run test:run`                | Run Vitest once                                   |
-| `npm run test:rules`              | Run Firestore Security Rules tests in an emulator |
-| `npm run test:emulators`          | Run local Auth + Firestore integration checks     |
-| `npm run test:e2e`                | Run desktop and mobile Playwright projects        |
-| `npm run check`                   | Run the local CI-equivalent checks except E2E     |
-| `npm run firebase:emulators`      | Start Auth, Firestore, Storage, and Hosting       |
-| `npm run firebase:deploy:rules`   | Deploy Firestore and Storage rules                |
-| `npm run firebase:deploy:hosting` | Build and deploy Hosting only                     |
-| `npm run firebase:deploy`         | Build and deploy all configured Firebase targets  |
+| Command                             | Purpose                                           |
+| ----------------------------------- | ------------------------------------------------- |
+| `npm run dev`                       | Start Vite at `http://127.0.0.1:5173`             |
+| `npm run build`                     | Type-check and create the production PWA bundle   |
+| `npm run preview`                   | Serve the built bundle at port 4173               |
+| `npm run lint`                      | Run ESLint, including accessibility rules         |
+| `npm run format`                    | Format supported files with Prettier              |
+| `npm run typecheck`                 | Run strict TypeScript project checks              |
+| `npm run test:run`                  | Run Vitest once                                   |
+| `npm run test:rules`                | Run Firestore Security Rules tests in an emulator |
+| `npm run test:emulators`            | Run local Auth + Firestore integration checks     |
+| `npm run test:e2e`                  | Run desktop and mobile Playwright projects        |
+| `npm run functions:build`           | Compile the Firebase reminder functions           |
+| `npm run functions:test`            | Test timezone-aware reminder scheduling           |
+| `npm run check`                     | Run the local CI-equivalent checks except E2E     |
+| `npm run firebase:emulators`        | Start Auth, Firestore, Storage, and Hosting       |
+| `npm run firebase:deploy:rules`     | Deploy Firestore and Storage rules                |
+| `npm run firebase:deploy:hosting`   | Build and deploy Hosting only                     |
+| `npm run firebase:deploy:reminders` | Deploy reminder rules, indexes, and functions     |
+| `npm run firebase:deploy`           | Build and deploy all configured Firebase targets  |
 
 Install Playwright's Chromium browser once with
 `npx playwright install chromium` before running E2E tests locally.
@@ -110,9 +115,10 @@ contract:
 - `.env.development.local` overrides development mode on one machine and is
   ignored by Git.
 
-All six `VITE_FIREBASE_*` browser configuration values must either be present
-together or omitted together. `VITE_USE_FIREBASE_EMULATORS=true` redirects Auth,
-Firestore, and Storage to localhost.
+All six core `VITE_FIREBASE_*` browser configuration values must either be
+present together or omitted together. `VITE_FIREBASE_VAPID_KEY` is additionally
+required for push notifications. `VITE_USE_FIREBASE_EMULATORS=true` redirects
+Auth, Firestore, Functions, and Storage to localhost.
 
 ## Firebase data layout
 
@@ -120,6 +126,8 @@ Firestore, and Storage to localhost.
 users/{uid}                              account profile
 users/{uid}/moodEntries/{entryId}        private synchronized entries
 users/{uid}/media/...                    private photos and voice memos
+users/{uid}/reminders/{reminderId}       private recurring reminders
+users/{uid}/pushSubscriptions/{deviceId} private per-device FCM tokens
 ```
 
 Dexie remains the immediate persistence boundary. Creating an entry never waits
@@ -151,4 +159,5 @@ docs/architecture/  architecture decision record
 ```
 
 See [Architecture decisions](docs/architecture/decisions.md) for the rationale
-and dependency rules behind this structure.
+and dependency rules behind this structure. See [Push reminders](docs/reminders.md)
+for billing, VAPID, deployment, privacy, and delivery details.

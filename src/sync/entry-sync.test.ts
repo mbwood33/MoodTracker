@@ -134,6 +134,82 @@ describe('entry synchronization', () => {
     expect(applied).toEqual([entry.id]);
   });
 
+  it('performs one full pull when an older cursor has no cache-count guard', async () => {
+    const requestedCursors: Array<string | null> = [];
+    const metadata = new Map<string, string>([
+      [`mood-entries:last-pulled:${entry.userId}`, entry.updatedAt],
+    ]);
+    let cachedEntries: MoodEntry[] = [];
+    const repository: LocalEntryRepository = {
+      save: async () => undefined,
+      applyRemote: async (remoteEntry) => {
+        cachedEntries = [remoteEntry];
+        return true;
+      },
+      get: async () => undefined,
+      listForUser: async () => cachedEntries,
+      getPendingMutations: async () => [],
+      markMutationProcessing: async () => undefined,
+      acknowledgeMutation: async () => undefined,
+      failMutation: async () => undefined,
+      getSyncMetadata: async (key) => metadata.get(key) ?? null,
+      setSyncMetadata: async (key, value) => {
+        metadata.set(key, value);
+      },
+    };
+
+    await synchronizePendingEntries(entry.userId, {
+      repository,
+      remote: { write: async () => undefined },
+      reader: {
+        pullChanges: async (cursor) => {
+          requestedCursors.push(cursor);
+          return [entry];
+        },
+      },
+    });
+
+    expect(requestedCursors).toEqual([null]);
+    expect(metadata.get(`mood-entries:last-pulled-count:${entry.userId}`)).toBe(
+      '1',
+    );
+  });
+
+  it('uses the incremental cursor when the cached entry count is intact', async () => {
+    const requestedCursors: Array<string | null> = [];
+    const metadata = new Map<string, string>([
+      [`mood-entries:last-pulled:${entry.userId}`, entry.updatedAt],
+      [`mood-entries:last-pulled-count:${entry.userId}`, '1'],
+    ]);
+    const repository: LocalEntryRepository = {
+      save: async () => undefined,
+      applyRemote: async () => false,
+      get: async () => undefined,
+      listForUser: async () => [entry],
+      getPendingMutations: async () => [],
+      markMutationProcessing: async () => undefined,
+      acknowledgeMutation: async () => undefined,
+      failMutation: async () => undefined,
+      getSyncMetadata: async (key) => metadata.get(key) ?? null,
+      setSyncMetadata: async (key, value) => {
+        metadata.set(key, value);
+      },
+    };
+
+    await synchronizePendingEntries(entry.userId, {
+      repository,
+      remote: { write: async () => undefined },
+      reader: {
+        pullChanges: async (cursor) => {
+          requestedCursors.push(cursor);
+          return [];
+        },
+      },
+    });
+
+    expect(requestedCursors).toEqual([entry.updatedAt]);
+  });
+
   it('batches new entries and avoids a read-before-write transaction', async () => {
     const acknowledgements: string[] = [];
     const repository: LocalEntryRepository = {
@@ -143,7 +219,10 @@ describe('entry synchronization', () => {
       listForUser: async () => [],
       getPendingMutations: async () => [
         queuedMutation('mutation-1'),
-        { ...queuedMutation('mutation-2'), entry: { ...entry, id: 'second-entry' } },
+        {
+          ...queuedMutation('mutation-2'),
+          entry: { ...entry, id: 'second-entry' },
+        },
       ],
       markMutationProcessing: async () => undefined,
       acknowledgeMutation: async (id) => {
@@ -165,7 +244,12 @@ describe('entry synchronization', () => {
       },
     });
 
-    expect(result).toEqual({ attempted: 2, synchronized: 2, failed: 0, pulled: 0 });
+    expect(result).toEqual({
+      attempted: 2,
+      synchronized: 2,
+      failed: 0,
+      pulled: 0,
+    });
     expect(batches).toHaveLength(1);
     expect(batches[0]).toHaveLength(2);
     expect(acknowledgements).toEqual(['mutation-1', 'mutation-2']);

@@ -55,6 +55,10 @@ function syncCursorKey(userId: string): string {
   return `mood-entries:last-pulled:${userId}`;
 }
 
+function syncCountKey(userId: string): string {
+  return `mood-entries:last-pulled-count:${userId}`;
+}
+
 /**
  * Processes a user-scoped outbox in chronological order. A failure is retained
  * in IndexedDB and later runs retry it; a local entry is never removed here.
@@ -94,7 +98,10 @@ async function synchronizePendingEntriesInternal(
     const mutation = queued[index];
     if (!mutation) break;
 
-    if (isInitialEntry(mutation) && supportsInitialEntryBatches(dependencies.remote)) {
+    if (
+      isInitialEntry(mutation) &&
+      supportsInitialEntryBatches(dependencies.remote)
+    ) {
       const batch: EntryMutation[] = [];
       for (
         let batchIndex = index;
@@ -118,14 +125,18 @@ async function synchronizePendingEntriesInternal(
           batch.map((item) => item.entry),
         );
         await Promise.all(
-          batch.map((item) => dependencies.repository.acknowledgeMutation(item.id)),
+          batch.map((item) =>
+            dependencies.repository.acknowledgeMutation(item.id),
+          ),
         );
         synchronized += batch.length;
         index += batch.length - 1;
         continue;
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Unknown synchronization error.';
+          error instanceof Error
+            ? error.message
+            : 'Unknown synchronization error.';
         await Promise.all(
           batch.map((item) =>
             dependencies.repository.failMutation(item.id, attemptedAt, message),
@@ -162,12 +173,23 @@ async function synchronizePendingEntriesInternal(
 
   let pulled = 0;
   if (failed === 0 && dependencies.reader) {
-    const cursor = dependencies.repository.getSyncMetadata
-      ? await dependencies.repository.getSyncMetadata(syncCursorKey(userId))
-      : (dependencies.lastPulledAt ?? null);
-    const remoteEntries = await dependencies.reader.pullChanges(
-      cursor,
-    );
+    const [storedCursor, storedCount, cachedEntries] = await Promise.all([
+      dependencies.repository.getSyncMetadata
+        ? dependencies.repository.getSyncMetadata(syncCursorKey(userId))
+        : Promise.resolve(dependencies.lastPulledAt ?? null),
+      dependencies.repository.getSyncMetadata
+        ? dependencies.repository.getSyncMetadata(syncCountKey(userId))
+        : Promise.resolve(null),
+      dependencies.repository.listForUser(userId, true),
+    ]);
+    const parsedStoredCount = storedCount === null ? null : Number(storedCount);
+    const cacheLooksIncomplete =
+      storedCursor !== null &&
+      (parsedStoredCount === null ||
+        !Number.isInteger(parsedStoredCount) ||
+        parsedStoredCount > cachedEntries.length);
+    const cursor = cacheLooksIncomplete ? null : storedCursor;
+    const remoteEntries = await dependencies.reader.pullChanges(cursor);
 
     for (const entry of remoteEntries) {
       if (await dependencies.repository.applyRemote(entry)) pulled += 1;
@@ -182,6 +204,16 @@ async function synchronizePendingEntriesInternal(
       await dependencies.repository.setSyncMetadata(
         syncCursorKey(userId),
         newestUpdatedAt,
+      );
+    }
+    if (dependencies.repository.setSyncMetadata) {
+      const refreshedEntries = await dependencies.repository.listForUser(
+        userId,
+        true,
+      );
+      await dependencies.repository.setSyncMetadata(
+        syncCountKey(userId),
+        String(refreshedEntries.length),
       );
     }
   }

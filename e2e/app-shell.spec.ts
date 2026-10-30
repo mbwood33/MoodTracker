@@ -9,7 +9,7 @@ test('navigates between all foundation pages', async ({ page }) => {
   for (const destination of [
     ['Log', 'Your entries'],
     ['Calendar', 'Your month at a glance'],
-    ['Stats', 'Understand your patterns'],
+    ['Stats', 'Your mood, clearly'],
     ['More', 'Tools and preferences'],
   ] as const) {
     await page.getByRole('link', { name: destination[0], exact: true }).click();
@@ -34,6 +34,20 @@ test('offers account setup when Firebase is not configured', async ({
   await page.goto('/auth');
 
   await expect(page.getByText('Firebase is not configured yet.')).toBeVisible();
+});
+
+test('opens reminder setup from More and explains sign-in when needed', async ({
+  page,
+}) => {
+  await page.goto('/more');
+  await page.getByRole('link', { name: 'Manage reminders' }).click();
+
+  await expect(
+    page.getByRole('heading', { name: 'Gentle check-ins, on your schedule' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Sign in or create an account' }),
+  ).toBeVisible();
 });
 
 test('reloads a deep route from the cached shell while offline', async ({

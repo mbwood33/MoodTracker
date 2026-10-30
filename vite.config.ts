@@ -15,6 +15,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt',
       injectRegister: null,
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'Mood Tracker',
@@ -23,6 +26,7 @@ export default defineConfig({
         theme_color: '#6d4aff',
         background_color: '#f8f7fc',
         display: 'standalone',
+        id: '/',
         start_url: '/',
         scope: '/',
         categories: ['health', 'lifestyle', 'productivity'],
@@ -41,11 +45,7 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
-        cleanupOutdatedCaches: true,
-        clientsClaim: false,
-        skipWaiting: false,
-        navigateFallback: '/index.html',
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,woff2}'],
       },
       devOptions: {

@@ -6,6 +6,11 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import {
+  connectFunctionsEmulator,
+  getFunctions,
+  type Functions,
+} from 'firebase/functions';
+import {
   connectStorageEmulator,
   getStorage,
   type FirebaseStorage,
@@ -17,6 +22,7 @@ export interface FirebaseServices {
   app: FirebaseApp;
   auth: Auth;
   firestore: Firestore;
+  functions: Functions;
   storage: FirebaseStorage;
 }
 
@@ -47,6 +53,7 @@ export function getFirebaseServices(): FirebaseServices | null {
     app,
     auth: getAuth(app),
     firestore: getFirestore(app),
+    functions: getFunctions(app),
     storage: getStorage(app),
   };
 
@@ -55,6 +62,7 @@ export function getFirebaseServices(): FirebaseServices | null {
       disableWarnings: true,
     });
     connectFirestoreEmulator(services.firestore, '127.0.0.1', 8080);
+    connectFunctionsEmulator(services.functions, '127.0.0.1', 5001);
     connectStorageEmulator(services.storage, '127.0.0.1', 9199);
     emulatorsConnected = true;
   }
